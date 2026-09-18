@@ -54,6 +54,8 @@ const Auth = {
   routeRoles: {
     dashboard: null, // everyone
     pos: ['admin', 'pharmacist', 'cashier'],
+    prescriptions: ['admin', 'pharmacist'],
+    patients: ['admin', 'pharmacist', 'cashier'],
     inventory: null, // everyone (read-only for cashier, enforced server-side)
     batches: ['admin', 'pharmacist'],
     purchases: ['admin', 'pharmacist'],

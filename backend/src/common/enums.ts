@@ -43,3 +43,10 @@ export enum MedicineType {
   PRESCRIPTION = 'prescription',
   CONTROLLED = 'controlled',
 }
+
+export enum PrescriptionStatus {
+  PENDING = 'pending',
+  APPROVED = 'approved',
+  DISPENSED = 'dispensed',
+  CANCELLED = 'cancelled',
+}

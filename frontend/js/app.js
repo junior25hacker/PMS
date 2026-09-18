@@ -7,8 +7,10 @@ const App = {
 
   routes: {
     dashboard: { view: 'DashboardView', title: 'Dashboard' },
-    inventory: { view: 'InventoryView', title: 'Medicines' },
     pos: { view: 'PosView', title: 'Point of Sale' },
+    prescriptions: { view: 'PrescriptionsView', title: 'Prescriptions' },
+    patients: { view: 'PatientsView', title: 'Patients' },
+    inventory: { view: 'InventoryView', title: 'Medicines' },
     batches: { view: 'BatchesView', title: 'Batches' },
     purchases: { view: 'PurchasesView', title: 'Purchase Orders' },
     sales: { view: 'SalesView', title: 'Sales' },

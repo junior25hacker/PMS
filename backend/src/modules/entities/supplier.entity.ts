@@ -27,6 +27,10 @@ export class Supplier extends BaseEntity {
   @Column({ name: 'payment_terms', length: 60, default: 'NET 30' })
   paymentTerms: string;
 
+  /** Comma-separated list or summary of drugs/therapeutic classes supplied */
+  @Column({ type: 'text', name: 'drugs_supplied', nullable: true })
+  drugsSupplied?: string | null;
+
   @Column({ type: 'text', nullable: true })
   notes?: string | null;
 

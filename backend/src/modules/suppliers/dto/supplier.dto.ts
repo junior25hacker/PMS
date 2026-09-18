@@ -49,6 +49,11 @@ export class CreateSupplierDto {
   @MaxLength(60)
   paymentTerms?: string;
 
+  @ApiProperty({ required: false, example: 'Amoxicillin, Paracetamol, Ibuprofen, Azithromycin' })
+  @IsOptional()
+  @IsString()
+  drugsSupplied?: string;
+
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
