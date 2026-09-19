@@ -15,6 +15,8 @@ import { CategoriesModule } from './modules/categories/categories.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { HealthController } from './modules/health/health.controller';
 import { MedicinesModule } from './modules/medicines/medicines.module';
+import { PatientsModule } from './modules/patients/patients.module';
+import { PrescriptionsModule } from './modules/prescriptions/prescriptions.module';
 import { PurchasesModule } from './modules/purchases/purchases.module';
 import { SalesModule } from './modules/sales/sales.module';
 import { SuppliersModule } from './modules/suppliers/suppliers.module';
@@ -48,6 +50,8 @@ import { UsersModule } from './modules/users/users.module';
     PurchasesModule,
     SalesModule,
     DashboardModule,
+    PatientsModule,
+    PrescriptionsModule,
   ],
   controllers: [HealthController],
   providers: [

@@ -22,19 +22,19 @@ var SuppliersView = {
         <div class="card-header">
           <span class="card-title">Suppliers ${this.meta ? `(${this.meta.total})` : ''}</span>
           <div class="btn-group">
-            <input type="text" class="form-control" style="width:200px;" placeholder="Search suppliers…" id="sup-search" value="${esc(this.search)}">
+            <input type="text" class="form-control" style="width:260px;" placeholder="Search name, contact, drugs…" id="sup-search" value="${esc(this.search)}">
             ${canEdit ? `<button class="btn btn-primary" onclick="SuppliersView.openForm()">+ New Supplier</button>` : ''}
           </div>
         </div>
         <div class="card-body">
           ${this.suppliers.length === 0
             ? '<div class="empty-state"><div class="empty-state-icon">🏢</div><div class="empty-state-text">No suppliers found</div></div>'
-            : `<div class="table-wrap"><table><thead><tr><th>Name</th><th>Contact</th><th>Email</th><th>Phone</th><th>Payment Terms</th><th>Orders</th><th>Status</th><th>Actions</th></tr></thead>
+            : `<div class="table-wrap"><table><thead><tr><th>Name</th><th>Contact</th><th>Drugs Supplied</th><th>Email / Phone</th><th>Payment Terms</th><th>Orders</th><th>Status</th><th>Actions</th></tr></thead>
                <tbody>${this.suppliers.map((s) => `<tr>
                 <td><strong>${esc(s.name)}</strong>${s.address ? `<br><small style="color:var(--text-muted)">${esc(s.address)}</small>` : ''}</td>
                 <td>${esc(s.contactPerson || '—')}</td>
-                <td>${esc(s.email || '—')}</td>
-                <td>${esc(s.phone || '—')}</td>
+                <td>${s.drugsSupplied ? s.drugsSupplied.split(',').map(d => `<span class="badge" style="background:#e0f2fe; color:#0369a1; margin:2px 2px 2px 0; display:inline-block; font-size:11px;">${esc(d.trim())}</span>`).join(' ') : '<span style="color:var(--text-muted)">—</span>'}</td>
+                <td>${esc(s.email || '—')}${s.phone ? `<br><small style="color:var(--text-muted)">${esc(s.phone)}</small>` : ''}</td>
                 <td>${esc(s.paymentTerms || 'NET 30')}</td>
                 <td>${s.orderCount ?? '—'}</td>
                 <td><span class="badge ${s.isActive ? 'badge-success' : 'badge-danger'}">${s.isActive ? 'Active' : 'Inactive'}</span></td>
@@ -70,6 +70,11 @@ var SuppliersView = {
               <div class="form-group" style="grid-column:1/-1;"><label>Address</label><textarea class="form-control" name="address" rows="2">${esc(e.address || '')}</textarea></div>
               <div class="form-group"><label>Tax ID</label><input class="form-control" name="taxId" value="${esc(e.taxId || '')}"></div>
               <div class="form-group"><label>Payment Terms</label><input class="form-control" name="paymentTerms" value="${esc(e.paymentTerms || 'NET 30')}"></div>
+              <div class="form-group" style="grid-column:1/-1;">
+                <label>Drugs / Categories Supplied</label>
+                <input class="form-control" name="drugsSupplied" placeholder="e.g. Amoxicillin, Paracetamol, Ibuprofen, Antibiotics" value="${esc(e.drugsSupplied || '')}">
+                <small style="color:var(--text-muted)">List drug names, therapeutic categories, or brands provided by this supplier (comma-separated)</small>
+              </div>
               <div class="form-group" style="grid-column:1/-1;"><label>Notes</label><textarea class="form-control" name="notes" rows="2">${esc(e.notes || '')}</textarea></div>
             </div>
             <div class="btn-group">
@@ -115,6 +120,7 @@ var SuppliersView = {
       address: raw.address || null,
       taxId: raw.taxId || null,
       paymentTerms: raw.paymentTerms || 'NET 30',
+      drugsSupplied: raw.drugsSupplied || null,
       notes: raw.notes || null,
     };
     try {

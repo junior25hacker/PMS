@@ -7,3 +7,6 @@ export * from './purchase-order.entity';
 export * from './purchase-order-item.entity';
 export * from './sale.entity';
 export * from './sale-item.entity';
+export * from './patient.entity';
+export * from './prescription.entity';
+export * from './prescription-item.entity';

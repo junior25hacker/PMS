@@ -17,6 +17,7 @@ export class SuppliersService {
       this.suppliersRepository.create({
         ...dto,
         name: dto.name.trim(),
+        drugsSupplied: dto.drugsSupplied ? dto.drugsSupplied.trim() : null,
         paymentTerms: dto.paymentTerms ?? 'NET 30',
         isActive: dto.isActive ?? true,
       }),
@@ -33,7 +34,7 @@ export class SuppliersService {
 
     if (query.search) {
       qb.where(
-        '(supplier.name ILIKE :term OR supplier.contactPerson ILIKE :term OR supplier.email ILIKE :term OR supplier.phone ILIKE :term)',
+        '(supplier.name ILIKE :term OR supplier.contactPerson ILIKE :term OR supplier.email ILIKE :term OR supplier.phone ILIKE :term OR supplier.drugsSupplied ILIKE :term)',
         { term: `%${query.search}%` },
       );
     }
@@ -52,6 +53,7 @@ export class SuppliersService {
     const supplier = await this.findOne(id);
     Object.assign(supplier, dto);
     if (dto.name) supplier.name = dto.name.trim();
+    if (dto.drugsSupplied !== undefined) supplier.drugsSupplied = dto.drugsSupplied ? dto.drugsSupplied.trim() : null;
     return this.suppliersRepository.save(supplier);
   }
 

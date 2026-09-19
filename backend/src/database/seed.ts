@@ -11,11 +11,14 @@ import 'reflect-metadata';
 import * as bcrypt from 'bcrypt';
 import { config as loadEnv } from 'dotenv';
 import AppDataSource from './data-source';
-import { PaymentMethod, SaleStatus, UserRole } from '../common/enums';
+import { PaymentMethod, PrescriptionStatus, SaleStatus, UserRole } from '../common/enums';
 import {
   Batch,
   Category,
   Medicine,
+  Patient,
+  Prescription,
+  PrescriptionItem,
   Sale,
   SaleItem,
   Supplier,
@@ -123,6 +126,7 @@ async function seedSuppliers(): Promise<Supplier[]> {
       address: '18 Harbour Road, Warehouse District',
       taxId: 'VAT-99231',
       paymentTerms: 'NET 30',
+      drugsSupplied: 'Paracetamol, Ibuprofen, Salbutamol Inhaler, Analgesics',
     },
     {
       name: 'Nordic Pharma Wholesale',
@@ -132,6 +136,7 @@ async function seedSuppliers(): Promise<Supplier[]> {
       address: '4 Fjord Street, Northgate',
       taxId: 'VAT-44120',
       paymentTerms: 'NET 45',
+      drugsSupplied: 'Amoxicillin, Ciprofloxacin, Antibiotics, Atorvastatin',
     },
     {
       name: 'Apex Generics Co.',
@@ -141,6 +146,7 @@ async function seedSuppliers(): Promise<Supplier[]> {
       address: '77 Industrial Park, Block C',
       taxId: 'VAT-77120',
       paymentTerms: 'NET 15',
+      drugsSupplied: 'Metformin, Insulin Glargine, Loratadine, Cetirizine, Omeprazole',
     },
   ];
 
@@ -346,6 +352,191 @@ async function seedSales(
   console.log(`  ✓ ${24} demo sales across the last 7 days`);
 }
 
+async function seedPatients(): Promise<Patient[]> {
+  const repository = AppDataSource.getRepository(Patient);
+  const definitions = [
+    {
+      name: 'Eleanor Vance',
+      dateOfBirth: '1988-04-12',
+      gender: 'female',
+      phone: '+15552341',
+      email: 'eleanor.vance@example.com',
+      address: '42 Blossom Hill Road',
+      knownAllergies: 'Penicillin, Amoxicillin',
+      emergencyContact: 'Thomas Vance (+15552342)',
+    },
+    {
+      name: 'Marcus Aurelius',
+      dateOfBirth: '1975-11-20',
+      gender: 'male',
+      phone: '+15553452',
+      email: 'marcus.a@example.com',
+      address: '10 Palatine Way',
+      knownAllergies: 'Aspirin, Ibuprofen, NSAIDs',
+      emergencyContact: 'Faustina (+15553453)',
+    },
+    {
+      name: 'Chloe Zhao',
+      dateOfBirth: '1995-08-03',
+      gender: 'female',
+      phone: '+15554563',
+      email: 'chloe.zhao@example.com',
+      address: '88 Sunset Boulevard',
+      knownAllergies: 'Sulfa drugs, Cotrimoxazole',
+      emergencyContact: 'Kevin Zhao (+15554564)',
+    },
+    {
+      name: 'David Miller',
+      dateOfBirth: '1968-02-14',
+      gender: 'male',
+      phone: '+15555674',
+      email: 'david.miller@example.com',
+      address: '15 Oak Ridge Lane',
+      knownAllergies: 'None',
+      emergencyContact: 'Sarah Miller (+15555675)',
+    },
+  ];
+
+  const patients: Patient[] = [];
+  for (const def of definitions) {
+    let patient = await repository.findOne({
+      where: { name: def.name, dateOfBirth: def.dateOfBirth },
+    });
+    if (!patient) {
+      patient = await repository.save(repository.create(def));
+      console.log(`  ✓ patient ${def.name} (Allergies: ${def.knownAllergies})`);
+    }
+    patients.push(patient);
+  }
+
+  return patients;
+}
+
+async function seedPrescriptions(
+  patients: Patient[],
+  medicines: Medicine[],
+  users: Record<string, User>,
+): Promise<void> {
+  const rxRepo = AppDataSource.getRepository(Prescription);
+  const itemRepo = AppDataSource.getRepository(PrescriptionItem);
+
+  const existingCount = await rxRepo.count();
+  if (existingCount > 0) return;
+
+  const pharmacist = users['pharmacist@pharmly.io'] ?? Object.values(users)[0];
+  const eleanor = patients.find((p) => p.name === 'Eleanor Vance') ?? patients[0];
+  const marcus = patients.find((p) => p.name === 'Marcus Aurelius') ?? patients[1];
+  const paracetamol = medicines.find((m) => m.name === 'Paracetamol');
+  const amoxicillin = medicines.find((m) => m.name === 'Amoxicillin');
+  const omeprazole = medicines.find((m) => m.name === 'Omeprazole');
+
+  // Rx 1: Standard prescription without conflicts
+  const rx1 = await rxRepo.save(
+    rxRepo.create({
+      prescriptionNumber: 'RX-202609-0001',
+      patientId: eleanor.id,
+      doctorName: 'Dr. Elizabeth Brooks, MD',
+      doctorLicense: 'MD-88341-TX',
+      clinicHospital: 'City Central Health Center',
+      diagnosis: 'Tension headache & mild fever',
+      issueDate: daysFromNow(-3),
+      expiryDate: daysFromNow(27),
+      status: PrescriptionStatus.APPROVED,
+      notes: 'Take with plenty of water',
+      allergyWarningTriggered: false,
+      allergyOverrideAcknowledged: false,
+      createdById: pharmacist.id,
+    }),
+  );
+
+  await itemRepo.save([
+    itemRepo.create({
+      prescriptionId: rx1.id,
+      medicineId: paracetamol?.id,
+      drugName: 'Paracetamol 500mg',
+      dosage: '500mg',
+      frequency: 'Every 6 hours as needed',
+      duration: '5 days',
+      quantityPrescribed: 20,
+      instructions: 'Do not exceed 4000mg in 24 hours',
+      hasAllergyConflict: false,
+    }),
+  ]);
+
+  // Rx 2: Prescription with allergy conflict and logged pharmacist acknowledgment
+  const rx2 = await rxRepo.save(
+    rxRepo.create({
+      prescriptionNumber: 'RX-202609-0002',
+      patientId: eleanor.id,
+      doctorName: 'Dr. Robert Langdon',
+      doctorLicense: 'MD-90122-MA',
+      clinicHospital: 'St. Jude General Hospital',
+      diagnosis: 'Severe bacterial respiratory infection',
+      issueDate: daysFromNow(-1),
+      expiryDate: daysFromNow(13),
+      status: PrescriptionStatus.PENDING,
+      notes: 'Urgent antibiotic therapy required',
+      allergyWarningTriggered: true,
+      allergyConflictDetails: 'Cross-reactivity warning: Prescribed "Amoxicillin 500mg" belongs to the PENICILLIN drug family, matching patient allergy "Penicillin, Amoxicillin".',
+      allergyOverrideAcknowledged: true,
+      allergyOverrideReason: 'Desensitization therapy completed under clinical supervision; confirmed safe by attending physician Dr. Langdon.',
+      allergyOverrideBy: pharmacist.fullName,
+      allergyOverrideAt: daysAgo(1),
+      createdById: pharmacist.id,
+    }),
+  );
+
+  await itemRepo.save([
+    itemRepo.create({
+      prescriptionId: rx2.id,
+      medicineId: amoxicillin?.id,
+      drugName: 'Amoxicillin 500mg',
+      dosage: '500mg',
+      frequency: 'Every 8 hours',
+      duration: '7 days',
+      quantityPrescribed: 21,
+      instructions: 'Complete full course with food',
+      hasAllergyConflict: true,
+      allergyConflictDetails: 'Conflict with listed patient allergy: Penicillin, Amoxicillin',
+    }),
+  ]);
+
+  // Rx 3: Marcus Aurelius maintenance prescription
+  const rx3 = await rxRepo.save(
+    rxRepo.create({
+      prescriptionNumber: 'RX-202609-0003',
+      patientId: marcus.id,
+      doctorName: 'Dr. Sarah Jenkins, MD',
+      doctorLicense: 'MD-44312-CA',
+      clinicHospital: 'Westside Cardiology Clinic',
+      diagnosis: 'Gastric protection',
+      issueDate: daysFromNow(-5),
+      expiryDate: daysFromNow(85),
+      status: PrescriptionStatus.DISPENSED,
+      notes: 'Maintenance regimen',
+      allergyWarningTriggered: false,
+      allergyOverrideAcknowledged: false,
+      createdById: pharmacist.id,
+    }),
+  );
+
+  await itemRepo.save([
+    itemRepo.create({
+      prescriptionId: rx3.id,
+      medicineId: omeprazole?.id,
+      drugName: 'Omeprazole 20mg',
+      dosage: '20mg',
+      frequency: 'Once daily before breakfast',
+      duration: '30 days',
+      quantityPrescribed: 30,
+      instructions: 'Take 30 minutes before first meal of the day',
+      hasAllergyConflict: false,
+    }),
+  ]);
+
+  console.log(`  ✓ 3 demo prescriptions (including verified allergy override logging)`);
+}
+
 async function run(): Promise<void> {
   console.log('\n🌱  Seeding Pharmly database...\n');
 
@@ -367,6 +558,12 @@ async function run(): Promise<void> {
 
   console.log('\nCatalog + batches');
   const medicines = await seedMedicines(categories, suppliers);
+
+  console.log('\nPatients');
+  const patients = await seedPatients();
+
+  console.log('\nPrescriptions + Allergy Records');
+  await seedPrescriptions(patients, medicines, users);
 
   console.log('\nDemo transactions');
   await seedSales(medicines, users);
