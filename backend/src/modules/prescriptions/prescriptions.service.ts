@@ -255,6 +255,18 @@ export class PrescriptionsService {
       qb.andWhere('rx.allergyWarningTriggered = :warn', { warn: true });
     }
 
+    if (query.startDate) {
+      qb.andWhere('rx.issueDate >= :startDate', { startDate: query.startDate });
+    }
+
+    if (query.endDate) {
+      qb.andWhere('rx.issueDate <= :endDate', { endDate: query.endDate });
+    }
+
+    if (query.drugName) {
+      qb.andWhere('items.drugName ILIKE :drugName', { drugName: `%${query.drugName}%` });
+    }
+
     if (query.search) {
       qb.andWhere(
         '(rx.prescriptionNumber ILIKE :term OR rx.doctorName ILIKE :term OR patient.name ILIKE :term OR rx.diagnosis ILIKE :term)',

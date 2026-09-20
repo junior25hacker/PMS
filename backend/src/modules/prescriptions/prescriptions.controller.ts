@@ -50,6 +50,7 @@ export class PrescriptionsController {
   }
 
   @Get()
+  @Roles(UserRole.ADMIN, UserRole.PHARMACIST)
   @ApiOperation({ summary: 'List prescriptions with filters' })
   findAll(@Query() query: PrescriptionQueryDto) {
     return this.prescriptionsService.findAll(query);

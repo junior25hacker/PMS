@@ -171,14 +171,25 @@ var PatientsView = {
     }
   },
 
-  async viewHistory(id) {
+  async viewHistory(id, filters = {}) {
+    if (!Auth.can('admin', 'pharmacist')) {
+      return toast('You do not have permission to view prescription history.', 'error');
+    }
+
     try {
-      const res = await API.get(`/patients/${id}`);
-      const patient = res.data || res;
-      const prescriptions = patient.prescriptions || [];
+      const pRes = await API.get(`/patients/${id}`);
+      const patient = pRes.data || pRes;
+      
+      const query = { patientId: id, sortBy: 'issueDate', sortOrder: 'desc', limit: 100, ...filters };
+      // Clean up empty filters
+      Object.keys(query).forEach(k => {
+        if (query[k] === '' || query[k] == null) delete query[k];
+      });
+      const rxRes = await API.get(`/prescriptions${API.qs(query)}`);
+      const { items: prescriptions } = API.list(rxRes);
 
       const html = `
-        <div style="min-width:600px; max-width:800px;">
+        <div style="min-width:700px; max-width:800px;">
           <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px;">
             <div>
               <h2 style="margin:0;">${esc(patient.name)}</h2>
@@ -196,10 +207,19 @@ var PatientsView = {
             </div>
           </div>
 
-          <h3 style="margin-bottom:8px; font-size:16px;">Prescription History (${prescriptions.length})</h3>
+          <h3 style="margin-bottom:8px; font-size:16px;">Prescription History</h3>
+          
+          <div style="display:flex; gap:10px; margin-bottom:12px;">
+            <input type="date" id="hist-start" class="form-control" style="width:140px" value="${esc(filters.startDate || '')}" title="Start Date">
+            <input type="date" id="hist-end" class="form-control" style="width:140px" value="${esc(filters.endDate || '')}" title="End Date">
+            <input type="text" id="hist-drug" class="form-control" style="flex:1" value="${esc(filters.drugName || '')}" placeholder="Filter by drug name...">
+            <button class="btn btn-primary" onclick="PatientsView.viewHistory(${id}, { startDate: document.getElementById('hist-start').value, endDate: document.getElementById('hist-end').value, drugName: document.getElementById('hist-drug').value })">Filter</button>
+            <button class="btn btn-secondary" onclick="PatientsView.viewHistory(${id}, {})">Clear</button>
+          </div>
+
           ${prescriptions.length === 0
-            ? '<div style="color:var(--text-muted); font-size:13px; padding:12px 0;">No prescriptions recorded for this patient yet.</div>'
-            : `<div class="table-wrap"><table><thead><tr><th>Rx #</th><th>Date</th><th>Doctor</th><th>Items</th><th>Allergy Alert</th><th>Status</th></tr></thead><tbody>
+            ? '<div style="color:var(--text-muted); font-size:13px; padding:12px 0;">No prescriptions found matching criteria.</div>'
+            : `<div class="table-wrap" style="max-height:400px; overflow-y:auto;"><table><thead><tr><th>Rx #</th><th>Date</th><th>Doctor</th><th>Items</th><th>Allergy Alert</th><th>Status</th></tr></thead><tbody>
               ${prescriptions.map((rx) => `<tr>
                 <td><strong>${esc(rx.prescriptionNumber)}</strong></td>
                 <td>${esc(rx.issueDate)}</td>
