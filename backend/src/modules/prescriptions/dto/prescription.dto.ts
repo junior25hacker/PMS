@@ -159,6 +159,23 @@ export class PrescriptionQueryDto extends PaginationQueryDto {
   @Type(() => Boolean)
   @IsBoolean()
   allergyWarningOnly?: boolean;
+
+  @ApiPropertyOptional({ description: 'Filter by start date (YYYY-MM-DD)' })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'startDate must be YYYY-MM-DD' })
+  startDate?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by end date (YYYY-MM-DD)' })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'endDate must be YYYY-MM-DD' })
+  endDate?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by drug name' })
+  @IsOptional()
+  @IsString()
+  drugName?: string;
 }
 
 export class UpdatePrescriptionStatusDto {
