@@ -21,7 +21,7 @@ import { Supplier } from './supplier.entity';
 @Entity('batches')
 @Index(['medicineId', 'expiryDate'])
 export class Batch extends BaseEntity {
-  @Column({ name: 'batch_number', length: 64 })
+  @Column({ name: 'batch_number', type: 'varchar', length: 64 })
   batchNumber: string;
 
   @ManyToOne(() => Medicine, (medicine) => medicine.batches, {
@@ -58,7 +58,7 @@ export class Batch extends BaseEntity {
 
   @Column({
     name: 'unit_cost',
-    type: 'numeric',
+    type: 'decimal',
     precision: 12,
     scale: 2,
     default: 0,
@@ -68,7 +68,7 @@ export class Batch extends BaseEntity {
 
   @Column({
     name: 'selling_price',
-    type: 'numeric',
+    type: 'decimal',
     precision: 12,
     scale: 2,
     default: 0,

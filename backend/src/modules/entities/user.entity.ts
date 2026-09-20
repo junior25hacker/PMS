@@ -6,19 +6,19 @@ import { Sale } from './sale.entity';
 
 @Entity('users')
 export class User extends BaseEntity {
-  @Column({ length: 120 })
+  @Column({ type: 'varchar', length: 120 })
   fullName: string;
 
   @Index({ unique: true })
-  @Column({ length: 160 })
+  @Column({ type: 'varchar', length: 160 })
   email: string;
 
   /** bcrypt hash — never serialised to API responses. */
   @Exclude()
-  @Column({ name: 'password_hash', length: 255, select: false })
+  @Column({ name: 'password_hash', type: 'varchar', length: 255, select: false })
   passwordHash: string;
 
-  @Column({ type: 'enum', enum: UserRole, default: UserRole.CASHIER })
+  @Column({ type: 'varchar', enum: UserRole, default: UserRole.CASHIER })
   role: UserRole;
 
   @Column({ type: 'varchar', length: 32, nullable: true })
@@ -27,7 +27,7 @@ export class User extends BaseEntity {
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
 
-  @Column({ name: 'last_login_at', type: 'timestamptz', nullable: true })
+  @Column({ name: 'last_login_at', type: 'datetime', nullable: true })
   lastLoginAt?: Date | null;
 
   @OneToMany(() => Sale, (sale) => sale.cashier)

@@ -34,6 +34,7 @@
     "pg": "^8.14.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
+    "sqlite3": "^6.0.1",
     "typeorm": "^0.3.21"
   },
   "devDependencies": {
@@ -56,11 +57,19 @@
     "typescript": "^5.8.2"
   },
   "jest": {
-    "moduleFileExtensions": ["js", "json", "ts"],
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
-    "transform": { "^.+\\.(t|j)s$": "ts-jest" },
-    "collectCoverageFrom": ["**/*.(t|j)s"],
+    "transform": {
+      "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "collectCoverageFrom": [
+      "**/*.(t|j)s"
+    ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
   }

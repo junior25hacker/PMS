@@ -5,7 +5,7 @@ import { PurchaseOrder } from './purchase-order.entity';
 
 @Entity('suppliers')
 export class Supplier extends BaseEntity {
-  @Column({ length: 140 })
+  @Column({ type: 'varchar', length: 140 })
   name: string;
 
   @Column({ type: 'varchar', name: 'contact_person', length: 120, nullable: true })
@@ -24,7 +24,7 @@ export class Supplier extends BaseEntity {
   @Column({ type: 'varchar', name: 'tax_id', length: 60, nullable: true })
   taxId?: string | null;
 
-  @Column({ name: 'payment_terms', length: 60, default: 'NET 30' })
+  @Column({ name: 'payment_terms', type: 'varchar', length: 60, default: 'NET 30' })
   paymentTerms: string;
 
   /** Comma-separated list or summary of drugs/therapeutic classes supplied */

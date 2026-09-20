@@ -6,7 +6,7 @@ import { Prescription } from './prescription.entity';
 @Index(['name', 'dateOfBirth'])
 export class Patient extends BaseEntity {
   @Index()
-  @Column({ length: 140 })
+  @Column({ type: 'varchar', length: 140 })
   name: string;
 
   @Column({ name: 'date_of_birth', type: 'varchar', length: 10 })

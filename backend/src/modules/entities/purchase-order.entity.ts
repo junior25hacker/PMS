@@ -16,7 +16,7 @@ import { User } from './user.entity';
 @Entity('purchase_orders')
 export class PurchaseOrder extends BaseEntity {
   @Index({ unique: true })
-  @Column({ name: 'po_number', length: 40 })
+  @Column({ name: 'po_number', type: 'varchar', length: 40 })
   poNumber: string;
 
   @ManyToOne(() => Supplier, (supplier) => supplier.purchaseOrders, {
@@ -29,7 +29,7 @@ export class PurchaseOrder extends BaseEntity {
   supplierId: number;
 
   @Column({
-    type: 'enum',
+    type: 'varchar',
     enum: PurchaseOrderStatus,
     default: PurchaseOrderStatus.DRAFT,
   })
@@ -43,7 +43,7 @@ export class PurchaseOrder extends BaseEntity {
 
   @Column({
     name: 'total_amount',
-    type: 'numeric',
+    type: 'decimal',
     precision: 12,
     scale: 2,
     default: 0,

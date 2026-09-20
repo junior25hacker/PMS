@@ -10,6 +10,7 @@ import {
   IsString,
   MaxLength,
   Min,
+  Max,
   ValidateNested,
 } from 'class-validator';
 import { PaymentMethod } from '../../../common/enums';
@@ -61,12 +62,40 @@ export class CreateSaleDto {
 
   @ApiPropertyOptional({
     example: 2.5,
-    description: 'Absolute discount amount (not a percentage) applied to the sale.',
+    description: 'Absolute fixed discount amount applied to the sale.',
   })
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   discountAmount?: number;
+
+  @ApiPropertyOptional({
+    example: 'fixed',
+    enum: ['fixed', 'percentage'],
+    description: 'Type of discount: fixed amount or percentage of subtotal.',
+  })
+  @IsOptional()
+  @IsEnum(['fixed', 'percentage'])
+  discountType?: 'fixed' | 'percentage';
+
+  @ApiPropertyOptional({
+    example: 10,
+    description: 'Percentage discount (0–100). Used when discountType is "percentage".',
+  })
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(100)
+  discountPercentage?: number;
+
+  @ApiPropertyOptional({
+    example: 'MGR-APPROVE-2026',
+    description: 'Manager approval code — required when discount exceeds the approval threshold.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  discountApprovalCode?: string;
 
   @ApiPropertyOptional({
     example: 20,

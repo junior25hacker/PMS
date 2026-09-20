@@ -53,7 +53,7 @@ export class PurchaseOrderItem extends BaseEntity {
 
   @Column({
     name: 'unit_cost',
-    type: 'numeric',
+    type: 'decimal',
     precision: 12,
     scale: 2,
     default: 0,
@@ -63,7 +63,7 @@ export class PurchaseOrderItem extends BaseEntity {
 
   @Column({
     name: 'line_total',
-    type: 'numeric',
+    type: 'decimal',
     precision: 12,
     scale: 2,
     default: 0,

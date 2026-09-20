@@ -34,7 +34,7 @@ export class SaleItem extends BaseEntity {
   @Column({ type: 'int', name: 'batch_id', nullable: true })
   batchId?: number | null;
 
-  @Column({ name: 'medicine_name', length: 160 })
+  @Column({ name: 'medicine_name', type: 'varchar', length: 160 })
   medicineName: string;
 
   @Column({ type: 'varchar', name: 'batch_number', length: 64, nullable: true })
@@ -45,7 +45,7 @@ export class SaleItem extends BaseEntity {
 
   @Column({
     name: 'unit_price',
-    type: 'numeric',
+    type: 'decimal',
     precision: 12,
     scale: 2,
     default: 0,
@@ -55,7 +55,7 @@ export class SaleItem extends BaseEntity {
 
   @Column({
     name: 'tax_rate',
-    type: 'numeric',
+    type: 'decimal',
     precision: 5,
     scale: 4,
     default: 0,
@@ -65,7 +65,7 @@ export class SaleItem extends BaseEntity {
 
   @Column({
     name: 'line_total',
-    type: 'numeric',
+    type: 'decimal',
     precision: 12,
     scale: 2,
     default: 0,

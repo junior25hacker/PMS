@@ -15,7 +15,7 @@ import { User } from './user.entity';
 @Entity('sales')
 export class Sale extends BaseEntity {
   @Index({ unique: true })
-  @Column({ name: 'invoice_number', length: 40 })
+  @Column({ name: 'invoice_number', type: 'varchar', length: 40 })
   invoiceNumber: string;
 
   @ManyToOne(() => User, (user) => user.sales, {
@@ -37,7 +37,7 @@ export class Sale extends BaseEntity {
 
   @Column({
     name: 'subtotal',
-    type: 'numeric',
+    type: 'decimal',
     precision: 12,
     scale: 2,
     default: 0,
@@ -47,7 +47,7 @@ export class Sale extends BaseEntity {
 
   @Column({
     name: 'discount_amount',
-    type: 'numeric',
+    type: 'decimal',
     precision: 12,
     scale: 2,
     default: 0,
@@ -57,7 +57,7 @@ export class Sale extends BaseEntity {
 
   @Column({
     name: 'tax_amount',
-    type: 'numeric',
+    type: 'decimal',
     precision: 12,
     scale: 2,
     default: 0,
@@ -67,7 +67,7 @@ export class Sale extends BaseEntity {
 
   @Column({
     name: 'total_amount',
-    type: 'numeric',
+    type: 'decimal',
     precision: 12,
     scale: 2,
     default: 0,
@@ -76,7 +76,7 @@ export class Sale extends BaseEntity {
   totalAmount: number;
 
   @Column({
-    type: 'enum',
+    type: 'varchar',
     enum: PaymentMethod,
     default: PaymentMethod.CASH,
   })
@@ -84,7 +84,7 @@ export class Sale extends BaseEntity {
 
   @Column({
     name: 'amount_paid',
-    type: 'numeric',
+    type: 'decimal',
     precision: 12,
     scale: 2,
     default: 0,
@@ -94,7 +94,7 @@ export class Sale extends BaseEntity {
 
   @Column({
     name: 'change_due',
-    type: 'numeric',
+    type: 'decimal',
     precision: 12,
     scale: 2,
     default: 0,
@@ -102,8 +102,28 @@ export class Sale extends BaseEntity {
   })
   changeDue: number;
 
-  @Column({ type: 'enum', enum: SaleStatus, default: SaleStatus.COMPLETED })
+  @Column({ type: 'varchar', enum: SaleStatus, default: SaleStatus.COMPLETED })
   status: SaleStatus;
+
+  /** Discount metadata */
+  @Column({ name: 'discount_type', type: 'varchar', length: 10, nullable: true })
+  discountType?: 'fixed' | 'percentage' | null;
+
+  @Column({
+    name: 'discount_percentage',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    nullable: true,
+    transformer: numericTransformer,
+  })
+  discountPercentage?: number | null;
+
+  @Column({ name: 'discount_approval_code', type: 'varchar', length: 80, nullable: true })
+  discountApprovalCode?: string | null;
+
+  @Column({ name: 'discount_approved_by', type: 'varchar', length: 140, nullable: true })
+  discountApprovedBy?: string | null;
 
   @OneToMany(() => SaleItem, (item) => item.sale, { cascade: true })
   items: SaleItem[];

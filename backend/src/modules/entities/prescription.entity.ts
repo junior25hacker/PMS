@@ -15,7 +15,7 @@ import { User } from './user.entity';
 @Entity('prescriptions')
 export class Prescription extends BaseEntity {
   @Index({ unique: true })
-  @Column({ name: 'prescription_number', length: 64 })
+  @Column({ name: 'prescription_number', type: 'varchar', length: 64 })
   prescriptionNumber: string;
 
   @Index()
@@ -29,13 +29,13 @@ export class Prescription extends BaseEntity {
   @JoinColumn({ name: 'patient_id' })
   patient: Patient;
 
-  @Column({ name: 'doctor_name', length: 140 })
+  @Column({ name: 'doctor_name', type: 'varchar', length: 140 })
   doctorName: string;
 
-  @Column({ name: 'doctor_license', length: 80, nullable: true })
+  @Column({ name: 'doctor_license', type: 'varchar', length: 80, nullable: true })
   doctorLicense?: string | null;
 
-  @Column({ name: 'clinic_hospital', length: 160, nullable: true })
+  @Column({ name: 'clinic_hospital', type: 'varchar', length: 160, nullable: true })
   clinicHospital?: string | null;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
@@ -48,7 +48,7 @@ export class Prescription extends BaseEntity {
   expiryDate?: string | null;
 
   @Column({
-    type: 'enum',
+    type: 'varchar',
     enum: PrescriptionStatus,
     default: PrescriptionStatus.PENDING,
   })
@@ -73,7 +73,7 @@ export class Prescription extends BaseEntity {
   @Column({ name: 'allergy_override_by', type: 'varchar', length: 140, nullable: true })
   allergyOverrideBy?: string | null;
 
-  @Column({ name: 'allergy_override_at', type: 'timestamptz', nullable: true })
+  @Column({ name: 'allergy_override_at', type: 'datetime', nullable: true })
   allergyOverrideAt?: Date | null;
 
   @Column({ name: 'created_by_id', type: 'int', nullable: true })
