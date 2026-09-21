@@ -11,6 +11,7 @@ var PosView = {
   discount: 0,
   customerName: '',
   customerPhone: '',
+  customerEmail: '',
   paymentMethod: 'cash',
   amountPaid: null,
   lastReceipt: null,
@@ -53,6 +54,9 @@ var PosView = {
             </div>
             <div class="pos-total-row"><span>Customer</span>
               <input type="text" id="pos-customer" placeholder="Walk-in" value="${esc(this.customerName)}" style="width:150px; padding:3px 6px;" onchange="PosView.customerName = this.value">
+            </div>
+            <div class="pos-total-row"><span>Email</span>
+              <input type="email" id="pos-customer-email" placeholder="Optional" value="${esc(this.customerEmail)}" style="width:150px; padding:3px 6px;" onchange="PosView.customerEmail = this.value">
             </div>
             <div class="pos-total-row"><span>Payment</span>
               <select id="pos-payment" style="width:120px; padding:3px 6px;" onchange="PosView.paymentMethod = this.value; App.refresh();">
@@ -227,6 +231,7 @@ var PosView = {
       paymentMethod: this.paymentMethod,
       customerName: this.customerName || undefined,
       customerPhone: this.customerPhone || undefined,
+      customerEmail: this.customerEmail || undefined,
       discountAmount: this.discount > 0 ? this.discount : undefined,
       amountPaid: this.paymentMethod === 'cash' ? (this.amountPaid ?? round2(this.total())) : undefined,
     };
@@ -243,6 +248,7 @@ var PosView = {
       this.discount = 0;
       this.customerName = '';
       this.customerPhone = '';
+      this.customerEmail = '';
       this.amountPaid = null;
       this._catalogLoaded = false; // re-fetch fresh stock levels
       App.refresh();
@@ -256,51 +262,7 @@ var PosView = {
   async showReceipt(saleId, autoPrint = false) {
     try {
       const r = await API.get(`/sales/${saleId}/receipt`);
-      const body = `
-        <div class="receipt">
-          <div class="receipt-header"><h2>💊 Pharmly</h2><small>Your trusted pharmacy</small></div>
-          <div class="receipt-row"><span>Invoice</span><span>${esc(r.invoiceNumber)}</span></div>
-          <div class="receipt-row"><span>Date</span><span>${fmtDateTime(r.issuedAt)}</span></div>
-          <div class="receipt-row"><span>Cashier</span><span>${esc(r.cashier)}</span></div>
-          <div class="receipt-row"><span>Customer</span><span>${esc(r.customer.name)}</span></div>
-          <div class="rule"></div>
-          ${r.lines.map((l) => `<div class="receipt-line">
-            <span>${esc(l.name)}${l.batchNumber ? ` <small>(${esc(l.batchNumber)})</small>` : ''} ×${l.quantity}</span>
-            <span>${fmtCurrency(l.lineTotal)}</span>
-          </div>`).join('')}
-          <div class="receipt-total">
-            <div class="receipt-row"><span>Subtotal</span><span>${fmtCurrency(r.totals.subtotal)}</span></div>
-            <div class="receipt-row"><span>Tax</span><span>${fmtCurrency(r.totals.tax)}</span></div>
-            ${r.totals.discount > 0 ? `<div class="receipt-row"><span>Discount</span><span>−${fmtCurrency(r.totals.discount)}</span></div>` : ''}
-            <div class="receipt-row"><strong>Total</strong><strong>${fmtCurrency(r.totals.total)}</strong></div>
-            <div class="receipt-row"><span>Paid (${esc(r.paymentMethod)})</span><span>${fmtCurrency(r.totals.amountPaid)}</span></div>
-            ${r.totals.changeDue > 0 ? `<div class="receipt-row"><strong>Change</strong><strong>${fmtCurrency(r.totals.changeDue)}</strong></div>` : ''}
-          </div>
-          <div class="receipt-footer">Thank you! Keep medicines out of reach of children.</div>
-          <div class="btn-group" style="margin-top:16px; justify-content:center;">
-            <button class="btn btn-primary" onclick="printHTML('${esc(r.invoiceNumber)}', document.getElementById('receipt-print-source').innerHTML)">🖨 Print</button>
-            <button class="btn" onclick="App.closeModal()">Close</button>
-          </div>
-        </div>
-        <div id="receipt-print-source" style="display:none;">
-          <h2>💊 Pharmly</h2><div class="sub">Your trusted pharmacy</div><div class="rule"></div>
-          <div class="row"><span>Invoice</span><span>${esc(r.invoiceNumber)}</span></div>
-          <div class="row"><span>Date</span><span>${fmtDateTime(r.issuedAt)}</span></div>
-          <div class="row"><span>Cashier</span><span>${esc(r.cashier)}</span></div>
-          <div class="row"><span>Customer</span><span>${esc(r.customer.name)}</span></div>
-          <div class="rule"></div>
-          ${r.lines.map((l) => `<div class="row"><span>${esc(l.name)} ×${l.quantity}${l.batchNumber ? ` [${esc(l.batchNumber)}]` : ''}</span><span>${fmtCurrency(l.lineTotal)}</span></div>`).join('')}
-          <div class="rule"></div>
-          <div class="row"><span>Subtotal</span><span>${fmtCurrency(r.totals.subtotal)}</span></div>
-          <div class="row"><span>Tax</span><span>${fmtCurrency(r.totals.tax)}</span></div>
-          ${r.totals.discount > 0 ? `<div class="row"><span>Discount</span><span>-${fmtCurrency(r.totals.discount)}</span></div>` : ''}
-          <div class="total row"><span>TOTAL</span><span>${fmtCurrency(r.totals.total)}</span></div>
-          <div class="row"><span>Paid (${esc(r.paymentMethod)})</span><span>${fmtCurrency(r.totals.amountPaid)}</span></div>
-          ${r.totals.changeDue > 0 ? `<div class="row"><span>Change</span><span>${fmtCurrency(r.totals.changeDue)}</span></div>` : ''}
-          <div class="rule"></div><div class="sub">Thank you! Keep medicines out of reach of children.</div>
-        </div>
-      `;
-      App.showModal(`Receipt — ${esc(r.invoiceNumber)}`, body, true);
+      App.showModal(`Receipt — ${esc(r.invoiceNumber)}`, receiptModalBody(r, saleId), true);
       if (autoPrint) {
         setTimeout(() => printHTML(r.invoiceNumber, document.getElementById('receipt-print-source').innerHTML), 300);
       }

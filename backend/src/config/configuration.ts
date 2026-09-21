@@ -26,9 +26,21 @@ export interface AppConfig {
   };
   bcryptSaltRounds: number;
   business: {
+    name: string;
+    address: string;
+    phone: string;
+    email: string;
     defaultTaxRate: number;
     lowStockThreshold: number;
     expiryAlertDays: number;
+  };
+  mail: {
+    host: string;
+    port: number;
+    user: string;
+    password: string;
+    from: string;
+    secure: boolean;
   };
 }
 
@@ -70,8 +82,20 @@ export default (): AppConfig => ({
   },
   bcryptSaltRounds: toInt(process.env.BCRYPT_SALT_ROUNDS, 10),
   business: {
+    name: process.env.BUSINESS_NAME ?? 'Pharmly',
+    address: process.env.BUSINESS_ADDRESS ?? '',
+    phone: process.env.BUSINESS_PHONE ?? '',
+    email: process.env.BUSINESS_EMAIL ?? '',
     defaultTaxRate: toFloat(process.env.DEFAULT_TAX_RATE, 0.12),
     lowStockThreshold: toInt(process.env.LOW_STOCK_THRESHOLD, 20),
     expiryAlertDays: toInt(process.env.EXPIRY_ALERT_DAYS, 90),
+  },
+  mail: {
+    host: process.env.SMTP_HOST ?? '',
+    port: toInt(process.env.SMTP_PORT, 587),
+    user: process.env.SMTP_USER ?? '',
+    password: process.env.SMTP_PASSWORD ?? '',
+    from: process.env.MAIL_FROM ?? process.env.SMTP_USER ?? '',
+    secure: toBool(process.env.SMTP_SECURE, false),
   },
 });

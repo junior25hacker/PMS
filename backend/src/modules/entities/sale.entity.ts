@@ -35,6 +35,9 @@ export class Sale extends BaseEntity {
   @Column({ type: 'varchar', name: 'customer_phone', length: 32, nullable: true })
   customerPhone?: string | null;
 
+  @Column({ type: 'varchar', name: 'customer_email', length: 160, nullable: true })
+  customerEmail?: string | null;
+
   @Column({
     name: 'subtotal',
     type: 'numeric',

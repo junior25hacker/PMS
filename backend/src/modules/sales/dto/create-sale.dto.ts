@@ -3,6 +3,7 @@ import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
+  IsEmail,
   IsEnum,
   IsInt,
   IsNumber,
@@ -58,6 +59,12 @@ export class CreateSaleDto {
   @IsString()
   @MaxLength(32)
   customerPhone?: string;
+
+  @ApiPropertyOptional({ example: 'customer@example.com' })
+  @IsOptional()
+  @IsEmail()
+  @MaxLength(160)
+  customerEmail?: string;
 
   @ApiPropertyOptional({
     example: 2.5,
