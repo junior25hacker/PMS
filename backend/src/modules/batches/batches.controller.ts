@@ -51,6 +51,13 @@ export class BatchesController {
     return this.batchesService.findFefoQueue(medicineId, includeEmpty === 'true');
   }
 
+  @Get('check-duplicate')
+  @ApiOperation({ summary: 'Check if a batch number already exists' })
+  @ApiQuery({ name: 'batchNumber', required: true })
+  checkDuplicate(@Query('batchNumber') batchNumber: string) {
+    return this.batchesService.checkDuplicate(batchNumber);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Fetch a single batch' })
   findOne(@Param('id', ParseIntPipe) id: number) {

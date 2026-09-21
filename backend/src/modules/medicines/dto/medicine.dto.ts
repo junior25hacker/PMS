@@ -96,6 +96,45 @@ export class CreateMedicineDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional({ example: 'BATCH-2026-001', description: 'Optional initial batch number' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  batchNumber?: string;
+
+  @ApiPropertyOptional({ example: 100, description: 'Optional initial batch quantity' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  quantity?: number;
+
+  @ApiPropertyOptional({ example: '2027-12-31', description: 'Expiry date (YYYY-MM-DD)' })
+  @IsOptional()
+  @IsString()
+  expiryDate?: string;
+
+  @ApiPropertyOptional({ example: '2026-01-01', description: 'Manufacturing date (YYYY-MM-DD)' })
+  @IsOptional()
+  @IsString()
+  manufacturingDate?: string;
+
+  @ApiPropertyOptional({ example: 1, description: 'Supplier ID for initial batch' })
+  @IsOptional()
+  @IsInt()
+  supplierId?: number;
+
+  @ApiPropertyOptional({ example: 1.5, description: 'Unit cost ($) for initial batch' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  unitCost?: number;
+
+  @ApiPropertyOptional({ example: 2.8, description: 'Selling price ($) for initial batch' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  sellingPrice?: number;
 }
 
 export class UpdateMedicineDto extends PartialType(CreateMedicineDto) {}

@@ -6,6 +6,7 @@ var InventoryView = {
   showForm: false,
   editing: null,
   categories: [],
+  suppliers: [],
 
   async load() {
     try {
@@ -17,6 +18,13 @@ var InventoryView = {
 
     if (this.categories.length === 0) {
       try { this.categories = await API.get('/categories'); } catch { /* optional */ }
+    }
+
+    if (this.suppliers.length === 0) {
+      try {
+        const supRes = await API.get('/suppliers?limit=100');
+        this.suppliers = API.list(supRes).items;
+      } catch { /* optional */ }
     }
   },
 
@@ -66,21 +74,65 @@ var InventoryView = {
     if (search) search.addEventListener('input', debounce(() => { this.search = search.value; this.meta = { ...(this.meta || {}), page: 1 }; App.refresh(); }, 350));
     const type = document.getElementById('inv-type');
     if (type) type.addEventListener('change', () => { this.type = type.value; this.meta = { ...(this.meta || {}), page: 1 }; App.refresh(); });
+    this.mountForm();
+  },
+
+  mountForm() {
+    const batchInput = document.getElementById('new-batch-number');
+    if (batchInput) {
+      batchInput.addEventListener('input', debounce(async () => {
+        const val = batchInput.value.trim();
+        const warnEl = document.getElementById('batch-duplicate-warning');
+        const okEl = document.getElementById('batch-valid-indicator');
+        const submitBtn = document.getElementById('med-submit-btn');
+        if (!val) {
+          if (warnEl) warnEl.style.display = 'none';
+          if (okEl) okEl.style.display = 'none';
+          if (submitBtn) submitBtn.disabled = false;
+          batchInput.style.borderColor = '';
+          return;
+        }
+        try {
+          const res = await API.get(`/batches/check-duplicate?batchNumber=${encodeURIComponent(val)}`);
+          if (res && res.exists) {
+            if (warnEl) {
+              const valSpan = document.getElementById('dup-batch-val');
+              const medSpan = document.getElementById('dup-batch-med');
+              if (valSpan) valSpan.textContent = val;
+              if (medSpan) medSpan.textContent = res.batch?.medicineName || 'an existing medicine';
+              warnEl.style.display = 'block';
+            }
+            if (okEl) okEl.style.display = 'none';
+            batchInput.style.borderColor = 'var(--danger)';
+            if (submitBtn) submitBtn.disabled = true;
+          } else {
+            if (warnEl) warnEl.style.display = 'none';
+            if (okEl) okEl.style.display = 'block';
+            batchInput.style.borderColor = 'var(--success)';
+            if (submitBtn) submitBtn.disabled = false;
+          }
+        } catch {
+          // If check endpoint fails gracefully continue
+        }
+      }, 300));
+    }
   },
 
   formHtml() {
     const e = this.editing || {};
+    const isNew = !this.editing;
     return `
       <div class="card">
         <div class="card-header"><span class="card-title">${this.editing ? 'Edit' : 'New'} Medicine</span></div>
         <div class="card-body">
           <form id="medicine-form" onsubmit="InventoryView.save(event)">
+            <h4 style="margin-bottom:12px; font-weight:600; color:var(--text);">Drug Details</h4>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:0 16px;">
-              <div class="form-group"><label>Name *</label><input class="form-control" name="name" value="${esc(e.name || '')}" required minlength="2"></div>
-              <div class="form-group"><label>SKU *</label><input class="form-control" name="sku" value="${esc(e.sku || '')}" required minlength="2"></div>
-              <div class="form-group"><label>Generic Name</label><input class="form-control" name="genericName" value="${esc(e.genericName || '')}"></div>
-              <div class="form-group"><label>Manufacturer</label><input class="form-control" name="manufacturer" value="${esc(e.manufacturer || '')}"></div>
-              <div class="form-group"><label>Barcode</label><input class="form-control" name="barcode" value="${esc(e.barcode || '')}"></div>
+              <div class="form-group"><label>Drug Name *</label><input class="form-control" name="name" value="${esc(e.name || '')}" required minlength="2" placeholder="e.g. Ceftriaxone"></div>
+              <div class="form-group"><label>SKU *</label><input class="form-control" name="sku" value="${esc(e.sku || '')}" required minlength="2" placeholder="e.g. CEF-1G-INJ"></div>
+              <div class="form-group"><label>Generic Name</label><input class="form-control" name="genericName" value="${esc(e.genericName || '')}" placeholder="e.g. Ceftriaxone sodium"></div>
+              <div class="form-group"><label>Manufacturer</label><input class="form-control" name="manufacturer" value="${esc(e.manufacturer || '')}" placeholder="e.g. Roche"></div>
+              <div class="form-group"><label>Barcode</label><input class="form-control" name="barcode" value="${esc(e.barcode || '')}" placeholder="e.g. 5901234567890"></div>
               <div class="form-group"><label>Strength</label><input class="form-control" name="strength" placeholder="e.g. 500mg" value="${esc(e.strength || '')}"></div>
               <div class="form-group"><label>Category</label>
                 <select class="form-control" name="categoryId">
@@ -101,8 +153,53 @@ var InventoryView = {
               <div class="form-group"><label>Tax Rate (0–1)</label><input class="form-control" name="taxRate" type="number" step="0.0001" min="0" max="1" value="${e.taxRate ?? 0.12}"></div>
             </div>
             <div class="form-group"><label>Description</label><textarea class="form-control" name="description" rows="2">${esc(e.description || '')}</textarea></div>
-            <div class="btn-group">
-              <button type="submit" class="btn btn-primary">Save</button>
+
+            ${isNew ? `
+              <div style="margin-top:20px; padding-top:16px; border-top:1px solid var(--border);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                  <h4 style="margin:0; font-weight:600; color:var(--primary);">📦 Initial Batch & Expiry Details</h4>
+                  <span style="font-size:12px; color:var(--text-muted);">Captures initial stock and physical batch details</span>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0 16px; background:rgba(13,110,253,0.03); padding:16px; border-radius:var(--radius); border:1px solid var(--border); margin-bottom:16px;">
+                  <div class="form-group">
+                    <label>Batch Number *</label>
+                    <input class="form-control" name="batchNumber" id="new-batch-number" placeholder="e.g. BATCH-2026-001" required autocomplete="off">
+                    <div id="batch-duplicate-warning" style="display:none; color:var(--danger); font-size:12px; margin-top:4px; font-weight:600;">
+                      ⚠️ Duplicate batch number: "<span id="dup-batch-val"></span>" is already in use by <span id="dup-batch-med"></span>!
+                    </div>
+                    <div id="batch-valid-indicator" style="display:none; color:var(--success); font-size:12px; margin-top:4px;">
+                      ✓ Unique batch number
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label>Initial Quantity (Units) *</label>
+                    <input class="form-control" name="quantity" type="number" min="1" placeholder="e.g. 100" required>
+                  </div>
+                  <div class="form-group">
+                    <label>Expiry Date *</label>
+                    <input class="form-control" name="expiryDate" type="date" required>
+                  </div>
+                  <div class="form-group">
+                    <label>Supplier</label>
+                    <select class="form-control" name="supplierId">
+                      <option value="">— Select Supplier —</option>
+                      ${this.suppliers.map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join('')}
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Unit Cost ($)</label>
+                    <input class="form-control" name="unitCost" type="number" step="0.01" min="0" placeholder="0.00">
+                  </div>
+                  <div class="form-group">
+                    <label>Selling Price ($)</label>
+                    <input class="form-control" name="sellingPrice" type="number" step="0.01" min="0" placeholder="0.00">
+                  </div>
+                </div>
+              </div>
+            ` : ''}
+
+            <div class="btn-group" style="margin-top:16px;">
+              <button type="submit" class="btn btn-primary" id="med-submit-btn">${this.editing ? 'Save Changes' : '+ Add Drug to Inventory'}</button>
               <button type="button" class="btn" onclick="InventoryView.closeForm()">Cancel</button>
             </div>
           </form>
@@ -125,11 +222,20 @@ var InventoryView = {
     if (existing) existing.remove();
     document.getElementById('page').insertAdjacentHTML('beforeend', this.formHtml().replace('<div class="card">', '<div class="card" id="medicine-form-card">'));
     document.getElementById('medicine-form-card').scrollIntoView({ behavior: 'smooth' });
+    this.mountForm();
   },
 
   async save(e) {
     e.preventDefault();
     const raw = formToObject(e.target);
+
+    // Check if duplicate batch warning is currently active
+    const warnEl = document.getElementById('batch-duplicate-warning');
+    if (warnEl && warnEl.style.display === 'block') {
+      toast('Duplicate batch number detected! Please enter a unique batch number.', 'error');
+      return;
+    }
+
     const data = {
       name: raw.name,
       sku: raw.sku.toUpperCase(),
@@ -145,11 +251,33 @@ var InventoryView = {
       taxRate: raw.taxRate !== '' ? Number(raw.taxRate) : 0.12,
       description: raw.description || null,
     };
+
+    // Include initial batch details when creating a new drug
+    if (!this.editing && raw.batchNumber) {
+      data.batchNumber = raw.batchNumber.trim();
+      data.quantity = raw.quantity !== '' ? Number(raw.quantity) : 0;
+      data.expiryDate = raw.expiryDate || undefined;
+      data.supplierId = raw.supplierId ? Number(raw.supplierId) : undefined;
+      data.unitCost = raw.unitCost !== '' ? Number(raw.unitCost) : undefined;
+      data.sellingPrice = raw.sellingPrice !== '' ? Number(raw.sellingPrice) : undefined;
+    }
+
     try {
-      if (this.editing) { await API.patch(`/medicines/${this.editing.id}`, data); toast('Medicine updated', 'success'); }
-      else { await API.post('/medicines', data); toast('Medicine created', 'success'); }
-      this.showForm = false; this.editing = null; App.refresh();
-    } catch (err) { toast(err.message, 'error'); }
+      if (this.editing) {
+        await API.patch(`/medicines/${this.editing.id}`, data);
+        toast('Medicine updated successfully', 'success');
+      } else {
+        await API.post('/medicines', data);
+        toast('Drug and initial batch added to inventory successfully', 'success');
+      }
+      this.showForm = false;
+      this.editing = null;
+      // Immediately reload so new entry appears in inventory list immediately
+      await this.load();
+      App.refresh();
+    } catch (err) {
+      toast(err.message, 'error');
+    }
   },
 
   async remove(id) {
