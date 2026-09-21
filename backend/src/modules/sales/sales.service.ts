@@ -5,16 +5,19 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { ConfigService } from '@nestjs/config';
 import { DataSource, EntityManager, Repository } from 'typeorm';
 import { paginate } from '../../common/dto/pagination-query.dto';
 import { PaymentMethod, SaleStatus } from '../../common/enums';
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
+import { AppConfig } from '../../config/configuration';
 import { Batch } from '../entities/batch.entity';
 import { Medicine } from '../entities/medicine.entity';
 import { SaleItem } from '../entities/sale-item.entity';
 import { Sale } from '../entities/sale.entity';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { SaleQueryDto } from './dto/sale-query.dto';
+import { ReceiptEmailService } from './receipt-email.service';
 
 /** Rounds to 2 decimals using banker-safe arithmetic on cents. */
 const round2 = (value: number): number => Math.round((value + Number.EPSILON) * 100) / 100;
@@ -37,6 +40,8 @@ export class SalesService {
     @InjectRepository(SaleItem)
     private readonly saleItemsRepository: Repository<SaleItem>,
     private readonly dataSource: DataSource,
+    private readonly receiptEmailService: ReceiptEmailService,
+    private readonly config: ConfigService<AppConfig, true>,
   ) {}
 
   // -------------------------------------------------------------------------
@@ -107,6 +112,7 @@ export class SalesService {
         cashierId: cashier.id,
         customerName: dto.customerName ?? null,
         customerPhone: dto.customerPhone ?? null,
+        customerEmail: dto.customerEmail ?? null,
         subtotal,
         discountAmount,
         taxAmount,
@@ -214,6 +220,7 @@ export class SalesService {
       customer: {
         name: sale.customerName ?? 'Walk-in customer',
         phone: sale.customerPhone ?? null,
+        email: sale.customerEmail ?? null,
       },
       paymentMethod: sale.paymentMethod,
       status: sale.status,
@@ -228,13 +235,28 @@ export class SalesService {
       },
       lines: sale.items.map((item) => ({
         name: item.medicineName,
-        batchNumber: item.batchNumber,
+        batchNumber: item.batchNumber ?? null,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         taxRate: item.taxRate,
         lineTotal: item.lineTotal,
       })),
+      business: this.config.get('business', { infer: true }),
     };
+  }
+
+  async emailReceipt(id: number, requestedEmail?: string) {
+    const sale = await this.findOne(id);
+    const receipt = await this.getReceipt(id);
+    const recipient = requestedEmail?.trim() || sale.customerEmail?.trim();
+    if (!recipient) {
+      throw new BadRequestException('This sale has no customer email address.');
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
+      throw new BadRequestException('The customer email address is invalid.');
+    }
+    await this.receiptEmailService.send(receipt, recipient);
+    return { message: `Receipt emailed to ${recipient}`, recipient };
   }
 
   // -------------------------------------------------------------------------

@@ -15,6 +15,7 @@ import {
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums';
 import { CreateSaleDto } from './dto/create-sale.dto';
+import { EmailReceiptDto } from './dto/email-receipt.dto';
 import { SaleQueryDto } from './dto/sale-query.dto';
 import { SalesService } from './sales.service';
 
@@ -80,6 +81,16 @@ export class SalesController {
   @ApiOperation({ summary: 'Printable receipt payload for a sale' })
   receipt(@Param('id', ParseIntPipe) id: number) {
     return this.salesService.getReceipt(id);
+  }
+
+  @Post(':id/receipt/email')
+  @Roles(UserRole.ADMIN, UserRole.CASHIER, UserRole.PHARMACIST)
+  @ApiOperation({ summary: 'Email a sale receipt to the customer' })
+  emailReceipt(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: EmailReceiptDto,
+  ) {
+    return this.salesService.emailReceipt(id, dto.email);
   }
 
   @Post(':id/refund')

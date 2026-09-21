@@ -78,50 +78,7 @@ var SalesView = {
   async receipt(id) {
     try {
       const r = await API.get(`/sales/${id}/receipt`);
-      App.showModal(`Receipt — ${esc(r.invoiceNumber)}`, `
-        <div class="receipt">
-          <div class="receipt-header"><h2>💊 Pharmly</h2><small>Your trusted pharmacy</small></div>
-          <div class="receipt-row"><span>Invoice</span><span>${esc(r.invoiceNumber)}</span></div>
-          <div class="receipt-row"><span>Date</span><span>${fmtDateTime(r.issuedAt)}</span></div>
-          <div class="receipt-row"><span>Cashier</span><span>${esc(r.cashier)}</span></div>
-          <div class="receipt-row"><span>Customer</span><span>${esc(r.customer.name)}</span></div>
-          <div class="rule"></div>
-          ${r.lines.map((l) => `<div class="receipt-line">
-            <span>${esc(l.name)}${l.batchNumber ? ` <small>(${esc(l.batchNumber)})</small>` : ''} ×${l.quantity}</span>
-            <span>${fmtCurrency(l.lineTotal)}</span>
-          </div>`).join('')}
-          <div class="receipt-total">
-            <div class="receipt-row"><span>Subtotal</span><span>${fmtCurrency(r.totals.subtotal)}</span></div>
-            <div class="receipt-row"><span>Tax</span><span>${fmtCurrency(r.totals.tax)}</span></div>
-            ${r.totals.discount > 0 ? `<div class="receipt-row"><span>Discount</span><span>−${fmtCurrency(r.totals.discount)}</span></div>` : ''}
-            <div class="receipt-row"><strong>Total</strong><strong>${fmtCurrency(r.totals.total)}</strong></div>
-            <div class="receipt-row"><span>Paid (${esc(r.paymentMethod)})</span><span>${fmtCurrency(r.totals.amountPaid)}</span></div>
-            ${r.totals.changeDue > 0 ? `<div class="receipt-row"><strong>Change</strong><strong>${fmtCurrency(r.totals.changeDue)}</strong></div>` : ''}
-          </div>
-          <div class="receipt-footer">Payment: ${esc(r.paymentMethod)} · ${esc(r.status)}</div>
-          <div class="btn-group" style="margin-top:16px; justify-content:center;">
-            <button class="btn btn-primary" onclick="printHTML('${esc(r.invoiceNumber)}', document.getElementById('receipt-print-source').innerHTML)">🖨 Print</button>
-            <button class="btn" onclick="App.closeModal()">Close</button>
-          </div>
-        </div>
-        <div id="receipt-print-source" style="display:none;">
-          <h2>💊 Pharmly</h2><div class="sub">Your trusted pharmacy</div><div class="rule"></div>
-          <div class="row"><span>Invoice</span><span>${esc(r.invoiceNumber)}</span></div>
-          <div class="row"><span>Date</span><span>${fmtDateTime(r.issuedAt)}</span></div>
-          <div class="row"><span>Cashier</span><span>${esc(r.cashier)}</span></div>
-          <div class="row"><span>Customer</span><span>${esc(r.customer.name)}</span></div>
-          <div class="rule"></div>
-          ${r.lines.map((l) => `<div class="row"><span>${esc(l.name)} ×${l.quantity}${l.batchNumber ? ` [${esc(l.batchNumber)}]` : ''}</span><span>${fmtCurrency(l.lineTotal)}</span></div>`).join('')}
-          <div class="rule"></div>
-          <div class="row"><span>Subtotal</span><span>${fmtCurrency(r.totals.subtotal)}</span></div>
-          <div class="row"><span>Tax</span><span>${fmtCurrency(r.totals.tax)}</span></div>
-          ${r.totals.discount > 0 ? `<div class="row"><span>Discount</span><span>-${fmtCurrency(r.totals.discount)}</span></div>` : ''}
-          <div class="total row"><span>TOTAL</span><span>${fmtCurrency(r.totals.total)}</span></div>
-          <div class="row"><span>Paid (${esc(r.paymentMethod)})</span><span>${fmtCurrency(r.totals.amountPaid)}</span></div>
-          ${r.totals.changeDue > 0 ? `<div class="row"><span>Change</span><span>${fmtCurrency(r.totals.changeDue)}</span></div>` : ''}
-          <div class="rule"></div><div class="sub">Thank you! Keep medicines out of reach of children.</div>
-        </div>
-      `, true);
+      App.showModal(`Receipt — ${esc(r.invoiceNumber)}`, receiptModalBody(r, id), true);
     } catch (e) { toast(e.message, 'error'); }
   },
 

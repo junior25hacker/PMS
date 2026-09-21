@@ -128,6 +128,83 @@ function printHTML(title, bodyHTML) {
   setTimeout(() => { win.print(); }, 250);
 }
 
+function receiptModalBody(r, saleId) {
+  const business = r.business || { name: 'Pharmly', address: '', phone: '', email: '' };
+  const customerEmail = r.customer?.email || '';
+  return `
+    <div class="receipt">
+      <div class="receipt-header"><h2>💊 ${esc(business.name)}</h2>
+        ${business.address ? `<small>${esc(business.address)}</small>` : ''}
+        ${business.phone || business.email ? `<small>${esc([business.phone, business.email].filter(Boolean).join(' · '))}</small>` : ''}
+      </div>
+      <div class="receipt-row"><span>Invoice</span><span>${esc(r.invoiceNumber)}</span></div>
+      <div class="receipt-row"><span>Date</span><span>${fmtDateTime(r.issuedAt)}</span></div>
+      <div class="receipt-row"><span>Cashier</span><span>${esc(r.cashier)}</span></div>
+      <div class="receipt-row"><span>Customer</span><span>${esc(r.customer.name)}</span></div>
+      <div class="rule"></div>
+      ${r.lines.map((l) => `<div class="receipt-line">
+        <span>${esc(l.name)} ×${l.quantity}<small> @ ${fmtCurrency(l.unitPrice)}</small></span>
+        <span>${fmtCurrency(l.lineTotal)}</span>
+      </div>`).join('')}
+      <div class="receipt-total">
+        <div class="receipt-row"><span>Subtotal</span><span>${fmtCurrency(r.totals.subtotal)}</span></div>
+        <div class="receipt-row"><span>Tax</span><span>${fmtCurrency(r.totals.tax)}</span></div>
+        ${r.totals.discount > 0 ? `<div class="receipt-row"><span>Discount</span><span>−${fmtCurrency(r.totals.discount)}</span></div>` : ''}
+        <div class="receipt-row"><strong>Total</strong><strong>${fmtCurrency(r.totals.total)}</strong></div>
+        <div class="receipt-row"><span>Paid (${esc(r.paymentMethod)})</span><span>${fmtCurrency(r.totals.amountPaid)}</span></div>
+        ${r.totals.changeDue > 0 ? `<div class="receipt-row"><strong>Change</strong><strong>${fmtCurrency(r.totals.changeDue)}</strong></div>` : ''}
+      </div>
+      <div class="receipt-footer">Thank you! Keep medicines out of reach of children.</div>
+      <label style="display:block; margin-top:14px;">Email receipt
+        <input type="email" id="receipt-email" class="form-control" placeholder="customer@example.com" value="${esc(customerEmail)}">
+      </label>
+      <div class="btn-group" style="margin-top:16px; justify-content:center;">
+        <button class="btn btn-primary" onclick="printHTML('${esc(r.invoiceNumber)}', document.getElementById('receipt-print-source').innerHTML)">🖨 Print Receipt</button>
+        <button class="btn" onclick="sendReceiptEmail(${saleId}, this)">✉ Email Receipt</button>
+        <button class="btn" onclick="App.closeModal()">Close</button>
+      </div>
+    </div>
+    <div id="receipt-print-source" style="display:none;">
+      <h2>${esc(business.name)}</h2>
+      ${business.address ? `<div class="sub">${esc(business.address)}</div>` : ''}
+      ${business.phone || business.email ? `<div class="sub">${esc([business.phone, business.email].filter(Boolean).join(' · '))}</div>` : ''}
+      <div class="rule"></div>
+      <div class="row"><span>Invoice</span><span>${esc(r.invoiceNumber)}</span></div>
+      <div class="row"><span>Date</span><span>${fmtDateTime(r.issuedAt)}</span></div>
+      <div class="row"><span>Cashier</span><span>${esc(r.cashier)}</span></div>
+      <div class="row"><span>Customer</span><span>${esc(r.customer.name)}</span></div>
+      <div class="rule"></div>
+      ${r.lines.map((l) => `<div class="row"><span>${esc(l.name)} ×${l.quantity} @ ${fmtCurrency(l.unitPrice)}</span><span>${fmtCurrency(l.lineTotal)}</span></div>`).join('')}
+      <div class="rule"></div>
+      <div class="row"><span>Subtotal</span><span>${fmtCurrency(r.totals.subtotal)}</span></div>
+      <div class="row"><span>Tax</span><span>${fmtCurrency(r.totals.tax)}</span></div>
+      ${r.totals.discount > 0 ? `<div class="row"><span>Discount</span><span>-${fmtCurrency(r.totals.discount)}</span></div>` : ''}
+      <div class="total row"><span>TOTAL</span><span>${fmtCurrency(r.totals.total)}</span></div>
+      <div class="row"><span>Paid (${esc(r.paymentMethod)})</span><span>${fmtCurrency(r.totals.amountPaid)}</span></div>
+      ${r.totals.changeDue > 0 ? `<div class="row"><span>Change</span><span>${fmtCurrency(r.totals.changeDue)}</span></div>` : ''}
+      <div class="rule"></div><div class="sub">Thank you! Keep medicines out of reach of children.</div>
+    </div>`;
+}
+
+async function sendReceiptEmail(saleId, button) {
+  const input = document.getElementById('receipt-email');
+  const email = input?.value.trim() || '';
+  if (!email) { toast('Enter a customer email address first', 'error'); input?.focus(); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('Enter a valid customer email address', 'error'); input?.focus(); return; }
+  const original = button.textContent;
+  button.disabled = true;
+  button.textContent = 'Sending…';
+  try {
+    const result = await API.post(`/sales/${saleId}/receipt/email`, { email });
+    toast(result.message || 'Receipt emailed successfully', 'success');
+  } catch (e) {
+    toast(e.message || 'Receipt email could not be sent', 'error');
+  } finally {
+    button.disabled = false;
+    button.textContent = original;
+  }
+}
+
 /** Stock badge helper shared by inventory / batches / POS. */
 function stockBadge(totalStock, reorderLevel) {
   const cls = totalStock <= 0 ? 'badge-danger' : totalStock <= reorderLevel ? 'badge-warning' : 'badge-success';

@@ -6,11 +6,12 @@ import { SaleItem } from '../entities/sale-item.entity';
 import { Sale } from '../entities/sale.entity';
 import { SalesController } from './sales.controller';
 import { SalesService } from './sales.service';
+import { ReceiptEmailService } from './receipt-email.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Sale, SaleItem, Batch, Medicine])],
   controllers: [SalesController],
-  providers: [SalesService],
+  providers: [SalesService, ReceiptEmailService],
   exports: [SalesService],
 })
 export class SalesModule {}
