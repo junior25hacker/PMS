@@ -39,15 +39,18 @@ var DashboardView = {
           <div class="kpi-value">${fmtCurrency(inv.inventoryValue || 0)}</div>
           <div class="kpi-change">${(inv.totalStock || 0).toLocaleString()} units · ${inv.productCount || 0} products</div>
         </div>
-        <div class="kpi-card danger">
-          <div class="kpi-label">Stock Alerts</div>
+        <div class="kpi-card danger" style="cursor:pointer;" onclick="App.navigate('stockAlerts')" title="Click to view dedicated Stock Alerts & Reorder Report">
+          <div class="kpi-label">Stock Alerts ↗</div>
           <div class="kpi-value">${(inv.lowStockCount || 0) + (inv.outOfStockCount || 0)}</div>
           <div class="kpi-change">Low: ${inv.lowStockCount || 0} · Out: ${inv.outOfStockCount || 0} · Expiring: ${inv.expiringSoonCount || 0}</div>
         </div>
       </div>
 
       <div class="card">
-        <div class="card-header"><span class="card-title">Low Stock Alerts</span></div>
+        <div class="card-header">
+          <span class="card-title">⚠️ Low Stock Alerts</span>
+          <button class="btn btn-sm btn-primary" onclick="App.navigate('stockAlerts')">View Full Report →</button>
+        </div>
         <div class="card-body">
           ${(alerts.lowStock || []).length === 0
             ? '<div class="empty-state"><div class="empty-state-icon">✅</div><div class="empty-state-text">No low stock items</div></div>'
@@ -56,7 +59,7 @@ var DashboardView = {
                 <td><strong>${esc(m.name)}</strong></td><td>${esc(m.sku)}</td>
                 <td>${m.totalStock}</td><td>${m.reorderLevel}</td>
                 <td><span class="badge ${m.totalStock <= 0 ? 'badge-danger' : 'badge-warning'}">${m.totalStock <= 0 ? 'Out of stock' : 'Low'}</span></td>
-                <td><button class="btn btn-sm" onclick="App.navigate('inventory')">View</button></td>
+                <td><button class="btn btn-sm" onclick="App.navigate('stockAlerts')">Report</button></td>
               </tr>`).join('')}</tbody></table>`}
         </div>
       </div>

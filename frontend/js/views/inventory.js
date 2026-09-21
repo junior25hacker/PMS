@@ -3,13 +3,14 @@ var InventoryView = {
   meta: null,
   search: '',
   type: '',
+  lowStockOnly: false,
   showForm: false,
   editing: null,
   categories: [],
 
   async load() {
     try {
-      const res = await API.get(`/medicines${API.qs({ page: this.meta?.page || 1, limit: 20, search: this.search, type: this.type })}`);
+      const res = await API.get(`/medicines${API.qs({ page: this.meta?.page || 1, limit: 20, search: this.search, type: this.type, lowStock: this.lowStockOnly ? true : undefined })}`);
       const { items, meta } = API.list(res);
       this.medicines = items;
       this.meta = meta;
@@ -20,20 +21,32 @@ var InventoryView = {
     }
   },
 
+  toggleLowStock() {
+    this.lowStockOnly = !this.lowStockOnly;
+    this.meta = { ...(this.meta || {}), page: 1 };
+    App.refresh();
+  },
+
   render() {
     const canEdit = Auth.can('admin', 'pharmacist');
     return `
       <div class="card">
         <div class="card-header">
           <span class="card-title">Medicines ${this.meta ? `(${this.meta.total})` : ''}</span>
-          <div class="btn-group">
-            <input type="text" class="form-control" style="width:220px;" placeholder="Search name, SKU, barcode…" id="inv-search" value="${esc(this.search)}">
-            <select class="form-control" style="width:160px;" id="inv-type">
+          <div class="btn-group" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <input type="text" class="form-control" style="width:200px;" placeholder="Search name, SKU, barcode…" id="inv-search" value="${esc(this.search)}">
+            <select class="form-control" style="width:140px;" id="inv-type">
               <option value="">All types</option>
               <option value="otc" ${this.type === 'otc' ? 'selected' : ''}>OTC</option>
               <option value="prescription" ${this.type === 'prescription' ? 'selected' : ''}>Prescription</option>
               <option value="controlled" ${this.type === 'controlled' ? 'selected' : ''}>Controlled</option>
             </select>
+            <button class="btn ${this.lowStockOnly ? 'btn-warning' : ''}" onclick="InventoryView.toggleLowStock()" title="Toggle low stock filter">
+              ${this.lowStockOnly ? '⚠️ Low Stock (Active)' : '⚠️ Low Stock'}
+            </button>
+            <button class="btn" onclick="App.navigate('stockAlerts')" title="Go to dedicated Stock Alerts report">
+              Alerts Report →
+            </button>
             ${canEdit ? `<button class="btn btn-primary" onclick="InventoryView.openForm()">+ New Medicine</button>` : ''}
           </div>
         </div>
@@ -97,7 +110,11 @@ var InventoryView = {
               </div>
               <div class="form-group"><label>Dosage Form</label><input class="form-control" name="dosageForm" placeholder="tablet" value="${esc(e.dosageForm || 'tablet')}"></div>
               <div class="form-group"><label>Unit</label><input class="form-control" name="unit" placeholder="unit" value="${esc(e.unit || 'unit')}"></div>
-              <div class="form-group"><label>Reorder Level</label><input class="form-control" name="reorderLevel" type="number" min="0" value="${e.reorderLevel ?? 20}"></div>
+              <div class="form-group">
+                <label>Reorder Threshold (Alert Level) *</label>
+                <input class="form-control" name="reorderLevel" type="number" min="0" value="${e.reorderLevel ?? 20}" required>
+                <small style="color:var(--text-muted); display:block; margin-top:2px;">Alerts when total stock falls at or below this level</small>
+              </div>
               <div class="form-group"><label>Tax Rate (0–1)</label><input class="form-control" name="taxRate" type="number" step="0.0001" min="0" max="1" value="${e.taxRate ?? 0.12}"></div>
             </div>
             <div class="form-group"><label>Description</label><textarea class="form-control" name="description" rows="2">${esc(e.description || '')}</textarea></div>
@@ -174,7 +191,7 @@ var InventoryView = {
           <tr><td><strong>Generic</strong></td><td>${esc(med.genericName || '—')}</td></tr>
           <tr><td><strong>Manufacturer</strong></td><td>${esc(med.manufacturer || '—')}</td></tr>
           <tr><td><strong>Barcode</strong></td><td>${esc(med.barcode || '—')}</td></tr>
-          <tr><td><strong>Reorder level</strong></td><td>${med.reorderLevel}</td></tr>
+          <tr><td><strong>Reorder threshold</strong></td><td>${med.reorderLevel} units ${canEdit ? `<button class="btn btn-sm" style="padding:1px 6px; font-size:11px; margin-left:8px;" onclick="App.closeModal(); StockAlertsView.openConfigureModal(${med.id}, ${med.reorderLevel}, '${esc(med.name)}')">⚙️ Edit</button>` : ''}</td></tr>
           <tr><td><strong>Tax rate</strong></td><td>${(med.taxRate * 100).toFixed(1)}%</td></tr>
           <tr><td><strong>Total stock</strong></td><td>${stockBadge(med.totalStock, med.reorderLevel)}</td></tr>
         </table>

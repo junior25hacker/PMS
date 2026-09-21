@@ -57,6 +57,7 @@ const Auth = {
     prescriptions: ['admin', 'pharmacist'],
     patients: ['admin', 'pharmacist', 'cashier'],
     inventory: null, // everyone (read-only for cashier, enforced server-side)
+    stockAlerts: ['admin', 'pharmacist'],
     batches: ['admin', 'pharmacist'],
     purchases: ['admin', 'pharmacist'],
     sales: ['admin', 'pharmacist', 'cashier'],

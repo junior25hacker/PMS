@@ -11,6 +11,7 @@ const App = {
     prescriptions: { view: 'PrescriptionsView', title: 'Prescriptions' },
     patients: { view: 'PatientsView', title: 'Patients' },
     inventory: { view: 'InventoryView', title: 'Medicines' },
+    stockAlerts: { view: 'StockAlertsView', title: 'Stock Alerts & Reorder Report' },
     batches: { view: 'BatchesView', title: 'Batches' },
     purchases: { view: 'PurchasesView', title: 'Purchase Orders' },
     sales: { view: 'SalesView', title: 'Sales' },
