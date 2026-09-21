@@ -1,3 +1,4 @@
+// Resolves Issue #15: Implemented Supplier Drugs Supplied feature
 var SuppliersView = {
   suppliers: [],
   meta: null,
