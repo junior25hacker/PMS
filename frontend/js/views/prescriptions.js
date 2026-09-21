@@ -1,3 +1,4 @@
+// Resolves Issue #7: Patient prescriptions implementation
 var PrescriptionsView = {
   prescriptions: [],
   patients: [],
