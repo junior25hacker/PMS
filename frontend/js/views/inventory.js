@@ -3,13 +3,21 @@ var InventoryView = {
   meta: null,
   search: '',
   type: '',
+  lowStockOnly: false,
   showForm: false,
   editing: null,
   categories: [],
 
   async load() {
     try {
-      const res = await API.get(`/medicines${API.qs({ page: this.meta?.page || 1, limit: 20, search: this.search, type: this.type })}`);
+      const params = {
+        page: this.meta?.page || 1,
+        limit: 20,
+        search: this.search,
+        type: this.type,
+      };
+      if (this.lowStockOnly) params.lowStock = true;
+      const res = await API.get(`/medicines${API.qs(params)}`);
       const { items, meta } = API.list(res);
       this.medicines = items;
       this.meta = meta;
@@ -20,6 +28,12 @@ var InventoryView = {
     }
   },
 
+  toggleLowStock() {
+    this.lowStockOnly = !this.lowStockOnly;
+    if (this.meta) this.meta.page = 1;
+    App.refresh();
+  },
+
   render() {
     const canEdit = Auth.can('admin', 'pharmacist');
     return `
@@ -27,8 +41,11 @@ var InventoryView = {
         <div class="card-header">
           <span class="card-title">Medicines ${this.meta ? `(${this.meta.total})` : ''}</span>
           <div class="btn-group">
-            <input type="text" class="form-control" style="width:220px;" placeholder="Search name, SKU, barcode…" id="inv-search" value="${esc(this.search)}">
-            <select class="form-control" style="width:160px;" id="inv-type">
+            <button class="btn btn-sm ${this.lowStockOnly ? 'btn-warning' : 'btn-secondary'}" onclick="InventoryView.toggleLowStock()" style="display:inline-flex; align-items:center; gap:4px;">
+              <span>${this.lowStockOnly ? '✓' : '⚠️'}</span> ${this.lowStockOnly ? 'Low Stock Filter Active' : 'Low Stock Only'}
+            </button>
+            <input type="text" class="form-control" style="width:200px;" placeholder="Search name, SKU, barcode…" id="inv-search" value="${esc(this.search)}">
+            <select class="form-control" style="width:140px;" id="inv-type">
               <option value="">All types</option>
               <option value="otc" ${this.type === 'otc' ? 'selected' : ''}>OTC</option>
               <option value="prescription" ${this.type === 'prescription' ? 'selected' : ''}>Prescription</option>
@@ -50,6 +67,7 @@ var InventoryView = {
                 <td>${expiryBadge(m.nearestExpiry)}</td>
                 <td>
                   <button class="btn btn-sm" onclick="InventoryView.detail(${m.id})">Details</button>
+                  ${(canEdit && m.totalStock <= m.reorderLevel) ? `<button class="btn btn-sm btn-primary" onclick="PurchasesView.startRestock(${m.id})">Restock</button>` : ''}
                   ${canEdit ? `<button class="btn btn-sm" onclick="InventoryView.edit(${m.id})">Edit</button>
                   <button class="btn btn-sm btn-danger" onclick="InventoryView.remove(${m.id})">✕</button>` : ''}
                 </td>

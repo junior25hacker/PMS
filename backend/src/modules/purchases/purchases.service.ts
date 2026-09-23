@@ -349,6 +349,118 @@ export class PurchasesService {
     return { message: `Purchase order ${purchaseOrder.poNumber} deleted` };
   }
 
+  async getLowStockSuggestions() {
+    const rawMedicines = await this.medicinesRepository
+      .createQueryBuilder('m')
+      .leftJoinAndSelect('m.category', 'category')
+      .where('m.isActive = :isActive', { isActive: true })
+      .andWhere(
+        `(SELECT COALESCE(SUM(b.quantity), 0) FROM batches b WHERE b.medicine_id = m.id) <= m.reorder_level`,
+      )
+      .getMany();
+
+    const suppliers = await this.suppliersRepository.find({
+      where: { isActive: true },
+    });
+
+    const batchRepo = this.dataSource.getRepository(Batch);
+    const recentBatches = await batchRepo.find({
+      relations: { supplier: true },
+      order: { createdAt: 'DESC' },
+    });
+
+    const suggestions = await Promise.all(
+      rawMedicines.map(async (medicine) => {
+        const stockRow = await batchRepo
+          .createQueryBuilder('b')
+          .select('COALESCE(SUM(b.quantity), 0)', 'totalStock')
+          .where('b.medicineId = :id', { id: medicine.id })
+          .getRawOne();
+
+        const totalStock = Number.parseInt(stockRow?.totalStock ?? '0', 10);
+        const reorderLevel = medicine.reorderLevel;
+        const suggestedQuantity = Math.max(reorderLevel * 2 - totalStock, 20);
+
+        const medBatches = recentBatches.filter((b) => b.medicineId === medicine.id);
+        const previousSuppliers = new Map<number, { cost: number; name: string }>();
+        for (const b of medBatches) {
+          if (b.supplierId && !previousSuppliers.has(b.supplierId)) {
+            previousSuppliers.set(b.supplierId, {
+              cost: Number(b.unitCost),
+              name: b.supplier?.name ?? `Supplier #${b.supplierId}`,
+            });
+          }
+        }
+
+        const recommendedSuppliers: Array<{
+          id: number;
+          name: string;
+          contactPerson?: string | null;
+          email?: string | null;
+          phone?: string | null;
+          drugsSupplied?: string | null;
+          matchReason: string;
+          lastUnitCost?: number | null;
+        }> = [];
+
+        for (const supplier of suppliers) {
+          const prev = previousSuppliers.get(supplier.id);
+          const drugsText = (supplier.drugsSupplied || '').toLowerCase();
+          const medName = medicine.name.toLowerCase();
+          const genericName = (medicine.genericName || '').toLowerCase();
+
+          const catalogMatch =
+            (medName && drugsText.includes(medName)) ||
+            (genericName && drugsText.includes(genericName)) ||
+            drugsText
+              .split(',')
+              .some(
+                (part) =>
+                  part.trim().length > 2 &&
+                  (medName.includes(part.trim()) || genericName.includes(part.trim())),
+              );
+
+          if (prev) {
+            recommendedSuppliers.push({
+              id: supplier.id,
+              name: supplier.name,
+              contactPerson: supplier.contactPerson,
+              email: supplier.email,
+              phone: supplier.phone,
+              drugsSupplied: supplier.drugsSupplied,
+              matchReason: `Previous supplier (Last unit cost: $${prev.cost.toFixed(2)})`,
+              lastUnitCost: prev.cost,
+            });
+          } else if (catalogMatch) {
+            recommendedSuppliers.push({
+              id: supplier.id,
+              name: supplier.name,
+              contactPerson: supplier.contactPerson,
+              email: supplier.email,
+              phone: supplier.phone,
+              drugsSupplied: supplier.drugsSupplied,
+              matchReason: `Catalog match: ${supplier.drugsSupplied}`,
+              lastUnitCost: null,
+            });
+          }
+        }
+
+        return {
+          medicineId: medicine.id,
+          name: medicine.name,
+          genericName: medicine.genericName,
+          sku: medicine.sku,
+          totalStock,
+          reorderLevel,
+          suggestedQuantity,
+          recommendedSuppliers,
+        };
+      }),
+    );
+
+    return suggestions;
+  }
+
   // -------------------------------------------------------------------------
 
   private async nextPoNumber(manager: EntityManager): Promise<string> {

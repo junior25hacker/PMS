@@ -144,8 +144,9 @@ function expiryBadge(expiryDate) {
 }
 
 function poStatusBadge(status) {
-  const map = { draft: 'badge-primary', ordered: 'badge-info', partially_received: 'badge-warning', received: 'badge-success', cancelled: 'badge-danger' };
-  return `<span class="badge ${map[status] || ''}">${esc((status || '').replace('_', ' '))}</span>`;
+  const map = { draft: 'badge-primary', sent: 'badge-info', ordered: 'badge-info', partially_received: 'badge-warning', received: 'badge-success', cancelled: 'badge-danger' };
+  const label = status === 'ordered' ? 'sent' : status;
+  return `<span class="badge ${map[status] || ''}">${esc((label || '').replace('_', ' '))}</span>`;
 }
 
 function saleStatusBadge(status) {

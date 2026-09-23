@@ -47,6 +47,12 @@ export class PurchasesController {
     return this.purchasesService.findAll(query);
   }
 
+  @Get('suggestions/low-stock')
+  @ApiOperation({ summary: 'Get low stock medicines with recommended suppliers for restocking' })
+  getLowStockSuggestions() {
+    return this.purchasesService.getLowStockSuggestions();
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Fetch one purchase order with its lines' })
   findOne(@Param('id', ParseIntPipe) id: number) {

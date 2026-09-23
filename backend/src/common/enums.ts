@@ -23,6 +23,7 @@ export enum PaymentMethod {
 
 export enum PurchaseOrderStatus {
   DRAFT = 'draft',
+  SENT = 'sent',
   ORDERED = 'ordered',
   PARTIALLY_RECEIVED = 'partially_received',
   RECEIVED = 'received',

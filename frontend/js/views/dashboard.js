@@ -47,16 +47,26 @@ var DashboardView = {
       </div>
 
       <div class="card">
-        <div class="card-header"><span class="card-title">Low Stock Alerts</span></div>
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+          <span class="card-title">Low Stock Alerts</span>
+          ${(alerts.lowStock || []).length > 0 ? `
+            <button class="btn btn-sm btn-secondary" onclick="PurchasesView.openRestockModal()" style="display:inline-flex; align-items:center; gap:4px;">
+              <span>⚡</span> Restock Assistant
+            </button>
+          ` : ''}
+        </div>
         <div class="card-body">
           ${(alerts.lowStock || []).length === 0
             ? '<div class="empty-state"><div class="empty-state-icon">✅</div><div class="empty-state-text">No low stock items</div></div>'
-            : `<table><thead><tr><th>Medicine</th><th>SKU</th><th>Stock</th><th>Reorder Level</th><th>Status</th><th></th></tr></thead>
+            : `<table><thead><tr><th>Medicine</th><th>SKU</th><th>Stock</th><th>Reorder Level</th><th>Status</th><th>Actions</th></tr></thead>
                <tbody>${alerts.lowStock.map((m) => `<tr>
                 <td><strong>${esc(m.name)}</strong></td><td>${esc(m.sku)}</td>
                 <td>${m.totalStock}</td><td>${m.reorderLevel}</td>
                 <td><span class="badge ${m.totalStock <= 0 ? 'badge-danger' : 'badge-warning'}">${m.totalStock <= 0 ? 'Out of stock' : 'Low'}</span></td>
-                <td><button class="btn btn-sm" onclick="App.navigate('inventory')">View</button></td>
+                <td>
+                  <button class="btn btn-sm" onclick="App.navigate('inventory')">View</button>
+                  <button class="btn btn-sm btn-primary" onclick="PurchasesView.startRestock(${m.id})">Restock</button>
+                </td>
               </tr>`).join('')}</tbody></table>`}
         </div>
       </div>
