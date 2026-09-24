@@ -11,6 +11,8 @@ import { paginate } from '../../common/dto/pagination-query.dto';
 import { Batch } from '../entities/batch.entity';
 import { Category } from '../entities/category.entity';
 import { Medicine } from '../entities/medicine.entity';
+import { Supplier } from '../entities/supplier.entity';
+import { MedicineType } from '../../common/enums';
 import {
   CreateMedicineDto,
   MedicineQueryDto,
@@ -35,6 +37,8 @@ export class MedicinesService {
     private readonly batchesRepository: Repository<Batch>,
     @InjectRepository(Category)
     private readonly categoriesRepository: Repository<Category>,
+    @InjectRepository(Supplier)
+    private readonly suppliersRepository: Repository<Supplier>,
     private readonly configService: ConfigService<AppConfig, true>,
   ) {}
 
@@ -61,17 +65,58 @@ export class MedicinesService {
 
     if (dto.categoryId) await this.assertCategory(dto.categoryId);
 
+    // Flag duplicate batch numbers before persisting
+    if (dto.batchNumber && dto.batchNumber.trim()) {
+      const cleanBatch = dto.batchNumber.trim();
+      const batchClash = await this.batchesRepository.findOne({
+        where: { batchNumber: cleanBatch },
+      });
+      if (batchClash) {
+        throw new ConflictException(
+          `Duplicate batch number: A batch with number "${cleanBatch}" already exists in inventory`,
+        );
+      }
+      if (dto.supplierId) {
+        await this.assertSupplier(dto.supplierId);
+      }
+    }
+
     const medicine = this.medicinesRepository.create({
-      ...dto,
       sku,
       name: dto.name.trim(),
+      genericName: dto.genericName?.trim() ?? null,
       barcode: dto.barcode?.trim() ?? null,
+      unit: dto.unit ?? 'tablet',
+      dosageForm: dto.dosageForm ?? 'tablet',
+      manufacturer: dto.manufacturer?.trim() ?? null,
+      strength: dto.strength?.trim() ?? null,
+      type: dto.type ?? MedicineType.OTC,
+      categoryId: dto.categoryId ?? null,
       taxRate: dto.taxRate ?? this.configService.get('business.defaultTaxRate', { infer: true }),
       reorderLevel: dto.reorderLevel ?? 20,
+      description: dto.description ?? null,
       isActive: dto.isActive ?? true,
     });
 
     const saved = await this.medicinesRepository.save(medicine);
+
+    // Persist initial batch if batch details were provided
+    if (dto.batchNumber && dto.batchNumber.trim()) {
+      const today = new Date().toISOString().slice(0, 10);
+      const batch = this.batchesRepository.create({
+        medicineId: saved.id,
+        batchNumber: dto.batchNumber.trim(),
+        quantity: dto.quantity ?? 0,
+        initialQuantity: dto.quantity ?? 0,
+        expiryDate: dto.expiryDate ?? today,
+        manufacturingDate: dto.manufacturingDate ?? today,
+        supplierId: dto.supplierId ?? null,
+        unitCost: dto.unitCost ?? 0,
+        sellingPrice: dto.sellingPrice ?? 0,
+      });
+      await this.batchesRepository.save(batch);
+    }
+
     return this.decorate(await this.reloadWithCategory(saved.id));
   }
 
@@ -393,6 +438,14 @@ export class MedicinesService {
       where: { id: categoryId },
     });
     if (!category) throw new NotFoundException(`Category #${categoryId} was not found`);
+  }
+
+  private async assertSupplier(supplierId: number): Promise<Supplier> {
+    const supplier = await this.suppliersRepository.findOne({
+      where: { id: supplierId },
+    });
+    if (!supplier) throw new NotFoundException(`Supplier #${supplierId} was not found`);
+    return supplier;
   }
 
   /** Exposed for other modules that need raw entities by id. */

@@ -29,6 +29,28 @@ export class BatchesService {
     private readonly dataSource: DataSource,
   ) {}
 
+  async checkDuplicate(batchNumber: string): Promise<{ exists: boolean; batch?: { id: number; batchNumber: string; medicineName: string } }> {
+    if (!batchNumber || !batchNumber.trim()) {
+      return { exists: false };
+    }
+    const clean = batchNumber.trim();
+    const batch = await this.batchesRepository.findOne({
+      where: { batchNumber: clean },
+      relations: { medicine: true },
+    });
+    if (!batch) {
+      return { exists: false };
+    }
+    return {
+      exists: true,
+      batch: {
+        id: batch.id,
+        batchNumber: batch.batchNumber,
+        medicineName: batch.medicine?.name ?? 'Unknown Medicine',
+      },
+    };
+  }
+
   async create(dto: CreateBatchDto): Promise<Batch> {
     await this.assertMedicine(dto.medicineId);
     this.assertDateOrder(dto.manufacturingDate, dto.expiryDate);
@@ -36,11 +58,11 @@ export class BatchesService {
     if (dto.supplierId) await this.assertSupplier(dto.supplierId);
 
     const clash = await this.batchesRepository.findOne({
-      where: { batchNumber: dto.batchNumber, medicineId: dto.medicineId },
+      where: { batchNumber: dto.batchNumber.trim() },
     });
     if (clash) {
       throw new ConflictException(
-        'This batch number already exists for the selected medicine',
+        `Duplicate batch number: A batch with number "${dto.batchNumber.trim()}" already exists in the system`,
       );
     }
 
