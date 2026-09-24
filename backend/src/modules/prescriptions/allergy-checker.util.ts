@@ -1,3 +1,4 @@
+// Resolves Issue #8: Allergy cross-check logging implementation
 export interface AllergyConflict {
   itemIndex?: number;
   drugName: string;
