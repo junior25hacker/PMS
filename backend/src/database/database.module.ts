@@ -1,5 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import * as sqlite3 from 'sqlite3';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -20,9 +21,7 @@ import {
 } from '../modules/entities';
 
 /**
- * Owns the PostgreSQL connection. `synchronize` is enabled only when
- * `DB_SYNCHRONIZE=true` (development / demo); production deployments should
- * run migrations instead.
+ * Owns the database connection. Synchronizes schema in demo/dev mode.
  */
 @Module({
   imports: [
@@ -49,6 +48,7 @@ import {
         return {
           type: 'sqlite' as const,
           database: dbPath,
+          driver: sqlite3,
           entities: [
             User,
             Category,

@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import * as sqlite3 from 'sqlite3';
 import { config as loadEnv } from 'dotenv';
 import { DataSource } from 'typeorm';
 import {
@@ -26,6 +27,7 @@ loadEnv();
 export const AppDataSource = new DataSource({
   type: 'sqlite',
   database: 'pharmly.sqlite',
+  driver: sqlite3,
   entities: [
     User,
     Category,

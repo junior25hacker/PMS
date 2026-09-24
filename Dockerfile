@@ -28,7 +28,7 @@ ENV PORT=3000
 # Install production dependencies only
 COPY backend/package*.json ./backend/
 WORKDIR /app/backend
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev && npm rebuild sqlite3
 
 # Copy compiled artifacts, static frontend, and database
 WORKDIR /app
