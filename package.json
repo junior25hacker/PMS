@@ -1,0 +1,15 @@
+{
+  "name": "pharmly-root",
+  "version": "1.0.0",
+  "description": "Pharmly — Pharmacy Management System",
+  "private": true,
+  "scripts": {
+    "build": "cd backend && npm install && npm run build",
+    "start": "cd backend && npm run start:prod",
+    "test": "cd backend && npm test",
+    "seed": "cd backend && npm run seed"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

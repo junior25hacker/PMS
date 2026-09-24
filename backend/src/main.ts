@@ -102,10 +102,16 @@ async function bootstrap(): Promise<void> {
   // the folder exists, so the app runs on a single URL with no CORS setup.
   // API routes take precedence; unknown paths fall back to index.html.
   // ---------------------------------------------------------------------------
-  const frontendDir = path.resolve(process.cwd(), '..', 'frontend');
+  const candidateDirs = [
+    path.resolve(process.cwd(), '..', 'frontend'),
+    path.resolve(process.cwd(), 'frontend'),
+    path.resolve(__dirname, '..', '..', 'frontend'),
+    path.resolve(__dirname, '..', '..', '..', 'frontend'),
+  ];
   try {
     const fs = await import('node:fs');
-    if (fs.existsSync(path.join(frontendDir, 'index.html'))) {
+    const frontendDir = candidateDirs.find((dir) => fs.existsSync(path.join(dir, 'index.html')));
+    if (frontendDir) {
       app.useStaticAssets(frontendDir, { index: 'index.html' });
       const express = await import('express');
       const router = express.Router();
