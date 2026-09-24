@@ -1,6 +1,5 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import * as sqlite3 from 'sqlite3';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -78,10 +77,18 @@ import {
             }
           }) ?? path.resolve(process.cwd(), 'pharmly.sqlite');
 
+        // Lazy-load sqlite3 only in local development when SQLite is used
+        let sqlite3Driver: any;
+        try {
+          sqlite3Driver = require('sqlite3');
+        } catch {
+          // sqlite3 native module not required when running PostgreSQL
+        }
+
         return {
           type: 'sqlite' as const,
           database: dbPath,
-          driver: sqlite3,
+          driver: sqlite3Driver,
           entities,
           synchronize: db.synchronize,
           logging: db.logging,

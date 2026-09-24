@@ -1,5 +1,4 @@
 import 'reflect-metadata';
-import * as sqlite3 from 'sqlite3';
 import { config as loadEnv } from 'dotenv';
 import { DataSource } from 'typeorm';
 import {
@@ -59,8 +58,9 @@ if (process.env.DB_SSL === 'true') {
   ssl = { rejectUnauthorized: false };
 }
 
-export const AppDataSource = isPostgres
-  ? new DataSource({
+const getDataSource = (): DataSource => {
+  if (isPostgres) {
+    return new DataSource({
       type: 'postgres',
       url: databaseUrl || undefined,
       host: databaseUrl ? undefined : (process.env.DB_HOST ?? 'localhost'),
@@ -75,15 +75,28 @@ export const AppDataSource = isPostgres
       migrations: ['src/database/migrations/*.ts'],
       synchronize: false,
       logging: false,
-    })
-  : new DataSource({
-      type: 'sqlite',
-      database: 'pharmly.sqlite',
-      driver: sqlite3,
-      entities,
-      migrations: ['src/database/migrations/*.ts'],
-      synchronize: false,
-      logging: false,
     });
+  }
+
+  // Lazy-load sqlite3 only in local development when SQLite is used
+  let sqlite3Driver: any;
+  try {
+    sqlite3Driver = require('sqlite3');
+  } catch {
+    // sqlite3 native module not required when running PostgreSQL
+  }
+
+  return new DataSource({
+    type: 'sqlite',
+    database: 'pharmly.sqlite',
+    driver: sqlite3Driver,
+    entities,
+    migrations: ['src/database/migrations/*.ts'],
+    synchronize: false,
+    logging: false,
+  });
+};
+
+export const AppDataSource = getDataSource();
 
 export default AppDataSource;
