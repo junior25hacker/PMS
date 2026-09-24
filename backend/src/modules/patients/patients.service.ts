@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { paginate, PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { ilikeOp } from '../../common/db.util';
 import { Patient } from '../entities/patient.entity';
 import { CreatePatientDto, UpdatePatientDto } from './dto/patient.dto';
 
@@ -53,8 +54,9 @@ export class PatientsService {
       .take(query.limit);
 
     if (query.search) {
+      const op = ilikeOp(this.patientsRepository);
       qb.where(
-        '(patient.name ILIKE :term OR patient.phone ILIKE :term OR patient.email ILIKE :term OR patient.knownAllergies ILIKE :term)',
+        `(patient.name ${op} :term OR patient.phone ${op} :term OR patient.email ${op} :term OR patient.knownAllergies ${op} :term)`,
         { term: `%${query.search}%` },
       );
     }

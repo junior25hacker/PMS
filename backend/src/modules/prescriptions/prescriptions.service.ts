@@ -7,6 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { paginate } from '../../common/dto/pagination-query.dto';
+import { ilikeOp } from '../../common/db.util';
 import { Medicine } from '../entities/medicine.entity';
 import { Patient } from '../entities/patient.entity';
 import { PrescriptionItem } from '../entities/prescription-item.entity';
@@ -263,13 +264,14 @@ export class PrescriptionsService {
       qb.andWhere('rx.issueDate <= :endDate', { endDate: query.endDate });
     }
 
+    const op = ilikeOp(this.prescriptionsRepository);
     if (query.drugName) {
-      qb.andWhere('items.drugName ILIKE :drugName', { drugName: `%${query.drugName}%` });
+      qb.andWhere(`items.drugName ${op} :drugName`, { drugName: `%${query.drugName}%` });
     }
 
     if (query.search) {
       qb.andWhere(
-        '(rx.prescriptionNumber ILIKE :term OR rx.doctorName ILIKE :term OR patient.name ILIKE :term OR rx.diagnosis ILIKE :term)',
+        `(rx.prescriptionNumber ${op} :term OR rx.doctorName ${op} :term OR patient.name ${op} :term OR rx.diagnosis ${op} :term)`,
         { term: `%${query.search}%` },
       );
     }

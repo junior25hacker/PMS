@@ -10,6 +10,7 @@ import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
 import type { AppConfig } from '../../config/configuration';
 import { UserRole } from '../../common/enums';
+import { ilikeOp } from '../../common/db.util';
 import { User } from '../entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -48,8 +49,9 @@ export class UsersService {
       .orderBy('user.fullName', 'ASC');
 
     if (search) {
+      const op = ilikeOp(this.usersRepository);
       query.where(
-        '(user.fullName ILIKE :term OR user.email ILIKE :term)',
+        `(user.fullName ${op} :term OR user.email ${op} :term)`,
         { term: `%${search}%` },
       );
     }

@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import type { AppConfig } from '../../config/configuration';
 import { paginate } from '../../common/dto/pagination-query.dto';
+import { ilikeOp } from '../../common/db.util';
 import { Batch } from '../entities/batch.entity';
 import { Category } from '../entities/category.entity';
 import { Medicine } from '../entities/medicine.entity';
@@ -126,8 +127,9 @@ export class MedicinesService {
       .leftJoinAndSelect('medicine.category', 'category');
 
     if (query.search) {
+      const op = ilikeOp(this.medicinesRepository);
       qb.andWhere(
-        '(medicine.name ILIKE :term OR medicine.genericName ILIKE :term OR medicine.sku ILIKE :term OR medicine.barcode = :exact OR medicine.manufacturer ILIKE :term)',
+        `(medicine.name ${op} :term OR medicine.genericName ${op} :term OR medicine.sku ${op} :term OR medicine.barcode = :exact OR medicine.manufacturer ${op} :term)`,
         { term: `%${query.search}%`, exact: query.search },
       );
     }
@@ -151,9 +153,12 @@ export class MedicinesService {
     }
 
     if (query.expiringInDays !== undefined) {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() + query.expiringInDays);
+      const cutoffStr = cutoffDate.toISOString().slice(0, 10);
       qb.andWhere(
-        `${NEAREST_EXPIRY_SUBQUERY} IS NOT NULL AND ${NEAREST_EXPIRY_SUBQUERY} <= (CURRENT_DATE + (:days || ' days')::interval)`,
-        { days: query.expiringInDays },
+        `${NEAREST_EXPIRY_SUBQUERY} IS NOT NULL AND ${NEAREST_EXPIRY_SUBQUERY} <= :cutoffStr`,
+        { cutoffStr },
       );
     }
 
@@ -252,12 +257,13 @@ export class MedicinesService {
     if (!term || term.trim().length === 0) return [];
 
     const trimmed = term.trim();
+    const op = ilikeOp(this.medicinesRepository);
     const qb = this.medicinesRepository
       .createQueryBuilder('medicine')
       .leftJoinAndSelect('medicine.category', 'category')
       .where('medicine.isActive = :active', { active: true })
       .andWhere(
-        '(medicine.barcode = :exact OR medicine.sku ILIKE :term OR medicine.name ILIKE :term OR medicine.genericName ILIKE :term)',
+        `(medicine.barcode = :exact OR medicine.sku ${op} :term OR medicine.name ${op} :term OR medicine.genericName ${op} :term)`,
         { exact: trimmed, term: `%${trimmed}%` },
       )
       .orderBy('medicine.name', 'ASC')
@@ -291,16 +297,17 @@ export class MedicinesService {
 
   /** Batches whose expiry date falls inside the alert window. */
   async findExpiringSoon(withinDays?: number, limit = 20) {
-    const days = withinDays ?? this.configService.get('business.expiryAlertDays', { infer: true });
+    const days = withinDays ?? this.configService.get('business.expiryAlertDays', { infer: true }) ?? 90;
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() + days);
+    const cutoffStr = cutoffDate.toISOString().slice(0, 10);
 
     const rows = await this.batchesRepository
       .createQueryBuilder('batch')
       .innerJoinAndSelect('batch.medicine', 'medicine')
       .leftJoinAndSelect('batch.supplier', 'supplier')
       .where('batch.quantity > 0')
-      .andWhere(`batch.expiry_date <= (CURRENT_DATE + (:days || ' days')::interval)`, {
-        days,
-      })
+      .andWhere('batch.expiry_date <= :cutoffStr', { cutoffStr })
       .orderBy('batch.expiryDate', 'ASC')
       .take(limit)
       .getMany();
@@ -348,24 +355,27 @@ export class MedicinesService {
     const [lowStockCount, outOfStockCount] = await Promise.all([
       this.medicinesRepository
         .createQueryBuilder('medicine')
-        .where('medicine.isActive = true')
+        .where('medicine.isActive = :active', { active: true })
         .andWhere(
           `${TOTAL_STOCK_SUBQUERY} > 0 AND ${TOTAL_STOCK_SUBQUERY} <= medicine.reorder_level`,
         )
         .getCount(),
       this.medicinesRepository
         .createQueryBuilder('medicine')
-        .where('medicine.isActive = true')
+        .where('medicine.isActive = :active', { active: true })
         .andWhere(`${TOTAL_STOCK_SUBQUERY} <= 0`)
         .getCount(),
     ]);
 
+    const alertDays = this.configService.get('business.expiryAlertDays', { infer: true }) ?? 90;
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() + alertDays);
+    const cutoffStr = cutoffDate.toISOString().slice(0, 10);
+
     const expiringSoonCount = await this.batchesRepository
       .createQueryBuilder('batch')
       .where('batch.quantity > 0')
-      .andWhere(`batch.expiry_date <= (CURRENT_DATE + (:days || ' days')::interval)`, {
-        days: this.configService.get('business.expiryAlertDays', { infer: true }),
-      })
+      .andWhere('batch.expiry_date <= :cutoffStr', { cutoffStr })
       .getCount();
 
     return {

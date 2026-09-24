@@ -7,6 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { paginate } from '../../common/dto/pagination-query.dto';
+import { ilikeOp } from '../../common/db.util';
 import { Batch } from '../entities/batch.entity';
 import { Medicine } from '../entities/medicine.entity';
 import { Supplier } from '../entities/supplier.entity';
@@ -91,15 +92,16 @@ export class BatchesService {
     }
 
     if (query.expiringInDays !== undefined) {
-      qb.andWhere(
-        `batch.expiry_date <= (CURRENT_DATE + (:days || ' days')::interval)`,
-        { days: query.expiringInDays },
-      );
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() + query.expiringInDays);
+      const cutoffStr = cutoffDate.toISOString().slice(0, 10);
+      qb.andWhere('batch.expiry_date <= :cutoffStr', { cutoffStr });
     }
 
     if (query.search) {
+      const op = ilikeOp(this.batchesRepository);
       qb.andWhere(
-        '(batch.batchNumber ILIKE :term OR medicine.name ILIKE :term OR medicine.sku ILIKE :term)',
+        `(batch.batchNumber ${op} :term OR medicine.name ${op} :term OR medicine.sku ${op} :term)`,
         { term: `%${query.search}%` },
       );
     }

@@ -5,6 +5,7 @@ import { MedicinesService } from './medicines.service';
 import { Medicine } from '../entities/medicine.entity';
 import { Batch } from '../entities/batch.entity';
 import { Category } from '../entities/category.entity';
+import { Supplier } from '../entities/supplier.entity';
 import { classifyStock } from './stock.util';
 import { MedicineType } from '../../common/enums';
 
@@ -33,6 +34,10 @@ describe('MedicinesService - Reorder Threshold & Low Stock Alerts', () => {
       findOne: jest.fn(),
     };
 
+    const supplierRepo = {
+      findOne: jest.fn(),
+    };
+
     configService = {
       get: jest.fn((key: string) => {
         if (key === 'business.defaultTaxRate') return 0.12;
@@ -47,6 +52,7 @@ describe('MedicinesService - Reorder Threshold & Low Stock Alerts', () => {
         { provide: getRepositoryToken(Medicine), useValue: medicineRepo },
         { provide: getRepositoryToken(Batch), useValue: batchRepo },
         { provide: getRepositoryToken(Category), useValue: categoryRepo },
+        { provide: getRepositoryToken(Supplier), useValue: supplierRepo },
         { provide: ConfigService, useValue: configService },
       ],
     }).compile();

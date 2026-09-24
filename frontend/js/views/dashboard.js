@@ -24,14 +24,14 @@ var DashboardView = {
           <div class="kpi-label">Revenue Today</div>
           <div class="kpi-value">${fmtCurrency(s.today?.revenue || 0)}</div>
           <div class="kpi-change ${s.revenueChangePct >= 0 ? 'positive' : 'negative'}">
-            ${s.revenueChangePct >= 0 ? '▲' : '▼'} ${Math.abs(s.revenueChangePct)}% vs yesterday
+            ${s.revenueChangePct >= 0 ? '▲' : '▼'} ${Math.abs(s.revenueChangePct || 0)}% vs yesterday
           </div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">Transactions Today</div>
           <div class="kpi-value">${s.today?.transactionCount || 0}</div>
           <div class="kpi-change ${s.transactionChangePct >= 0 ? 'positive' : 'negative'}">
-            ${s.transactionChangePct >= 0 ? '▲' : '▼'} ${Math.abs(s.transactionChangePct)}% vs yesterday
+            ${s.transactionChangePct >= 0 ? '▲' : '▼'} ${Math.abs(s.transactionChangePct || 0)}% vs yesterday
           </div>
         </div>
         <div class="kpi-card warning">
@@ -109,7 +109,7 @@ var DashboardView = {
               const h = Math.max(4, Math.round((t.revenue / max) * 140));
               return `<div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;" title="${t.date}: ${fmtCurrency(t.revenue)} (${t.transactionCount} sales)">
                 <div style="width:100%; height:${h}px; background:var(--primary); border-radius:4px 4px 0 0; opacity:${0.4 + (t.revenue / max) * 0.6};"></div>
-                <small style="color:var(--text-muted);">${t.date.slice(5)}</small>
+                <small style="color:var(--text-muted);">${t.date ? String(t.date).slice(5) : ''}</small>
               </div>`;
             }).join('')}
           </div>

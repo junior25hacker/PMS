@@ -8,6 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { paginate } from '../../common/dto/pagination-query.dto';
+import { ilikeOp } from '../../common/db.util';
 import { PurchaseOrderStatus } from '../../common/enums';
 import { DataSource, EntityManager, Repository } from 'typeorm';
 import { Batch } from '../entities/batch.entity';
@@ -116,7 +117,8 @@ export class PurchasesService {
       qb.andWhere('po.supplierId = :supplierId', { supplierId: query.supplierId });
     }
     if (query.search) {
-      qb.andWhere('(po.poNumber ILIKE :term OR supplier.name ILIKE :term)', {
+      const op = ilikeOp(this.purchaseOrdersRepository);
+      qb.andWhere(`(po.poNumber ${op} :term OR supplier.name ${op} :term)`, {
         term: `%${query.search}%`,
       });
     }
@@ -353,14 +355,16 @@ export class PurchasesService {
 
   private async nextPoNumber(manager: EntityManager): Promise<string> {
     const day = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    await manager.query('SELECT pg_advisory_xact_lock($1)', [
-      (Number.parseInt(day, 10) % 2_147_483_000) + 500,
-    ]);
+    if (this.dataSource.options.type === 'postgres') {
+      await manager.query('SELECT pg_advisory_xact_lock($1)', [
+        (Number.parseInt(day, 10) % 2_147_483_000) + 500,
+      ]);
+    }
 
-    const [{ count }] = await manager.query<Array<{ count: string }>>(
-      `SELECT COUNT(*)::text AS count FROM purchase_orders WHERE DATE(created_at) = CURRENT_DATE`,
+    const [{ count }] = await manager.query<Array<{ count: string | number }>>(
+      `SELECT COUNT(*) AS count FROM purchase_orders WHERE DATE(created_at) = CURRENT_DATE`,
     );
 
-    return `PO-${day}-${(Number.parseInt(count, 10) + 1).toString().padStart(4, '0')}`;
+    return `PO-${day}-${(Number.parseInt(String(count), 10) + 1).toString().padStart(4, '0')}`;
   }
 }

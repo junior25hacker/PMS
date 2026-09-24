@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PaginationQueryDto, paginate } from '../../common/dto/pagination-query.dto';
+import { ilikeOp } from '../../common/db.util';
 import { Supplier } from '../entities/supplier.entity';
 import { CreateSupplierDto, UpdateSupplierDto } from './dto/supplier.dto';
 
@@ -33,8 +34,9 @@ export class SuppliersService {
       .take(query.limit);
 
     if (query.search) {
+      const op = ilikeOp(this.suppliersRepository);
       qb.where(
-        '(supplier.name ILIKE :term OR supplier.contactPerson ILIKE :term OR supplier.email ILIKE :term OR supplier.phone ILIKE :term OR supplier.drugsSupplied ILIKE :term)',
+        `(supplier.name ${op} :term OR supplier.contactPerson ${op} :term OR supplier.email ${op} :term OR supplier.phone ${op} :term OR supplier.drugsSupplied ${op} :term)`,
         { term: `%${query.search}%` },
       );
     }

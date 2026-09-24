@@ -180,9 +180,28 @@ select.form-control { appearance: auto; }
 .receipt-total { border-top: 2px solid var(--text); padding-top: 8px; font-weight: 700; font-size: 16px; margin-top: 8px; }
 .receipt-footer { text-align: center; margin-top: 20px; padding-top: 12px; border-top: 2px dashed var(--border); font-size: 12px; color: var(--text-muted); }
 
-.login-page { display: flex; align-items: center; justify-content: center; position: fixed; inset: 0; z-index: 999; height: 100vh; background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%); transition: opacity 0.3s ease; }
+.login-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  height: 100vh;
+  background: linear-gradient(rgba(15, 23, 42, 0.55), rgba(15, 23, 42, 0.65)), url('../assets/Pharmy.jpeg') center/cover no-repeat;
+  transition: opacity 0.3s ease;
+}
 .login-page.fade-out { opacity: 0; pointer-events: none; }
-.login-box { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-lg); padding: 40px; width: 400px; max-width: 90%; }
+.login-box {
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--radius);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+  padding: 40px;
+  width: 400px;
+  max-width: 90%;
+}
 .login-box h1 { text-align: center; margin-bottom: 6px; font-size: 24px; }
 .login-box .login-subtitle { text-align: center; color: var(--text-muted); margin-bottom: 24px; font-size: 14px; }
 .login-error { background: var(--danger-light); color: #842029; padding: 10px; border-radius: var(--radius); margin-bottom: 16px; font-size: 13px; display: none; }

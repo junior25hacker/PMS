@@ -15,6 +15,7 @@ import { SaleItem } from '../entities/sale-item.entity';
 import { Sale } from '../entities/sale.entity';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { SaleQueryDto } from './dto/sale-query.dto';
+import { ilikeOp } from '../../common/db.util';
 
 /** Rounds to 2 decimals using banker-safe arithmetic on cents. */
 const round2 = (value: number): number => Math.round((value + Number.EPSILON) * 100) / 100;
@@ -202,8 +203,9 @@ export class SalesService {
       qb.andWhere('sale.cashierId = :cashierId', { cashierId: query.cashierId });
     }
     if (query.search) {
+      const op = ilikeOp(this.salesRepository);
       qb.andWhere(
-        '(sale.invoiceNumber ILIKE :term OR sale.customerName ILIKE :term OR items.medicineName ILIKE :term)',
+        `(sale.invoiceNumber ${op} :term OR sale.customerName ${op} :term OR items.medicineName ${op} :term)`,
         { term: `%${query.search}%` },
       );
     }
@@ -345,21 +347,23 @@ export class SalesService {
 
   /** Revenue + units sold for each of the last N days (dashboard sparkline). */
   async getSalesTrend(days = 7) {
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - (days - 1));
+    const startStr = startDate.toISOString().slice(0, 10);
+
     return this.salesRepository
       .createQueryBuilder('sale')
-      .select("TO_CHAR(DATE(sale.created_at), 'YYYY-MM-DD')", 'date')
+      .select('DATE(sale.created_at)', 'date')
       .addSelect('COALESCE(SUM(sale.total_amount), 0)', 'revenue')
       .addSelect('COUNT(*)', 'transactionCount')
       .where('sale.status = :status', { status: SaleStatus.COMPLETED })
-      .andWhere(`sale.created_at >= (CURRENT_DATE - (:days || ' days')::interval)`, {
-        days: days - 1,
-      })
+      .andWhere('DATE(sale.created_at) >= :startStr', { startStr })
       .groupBy('DATE(sale.created_at)')
       .orderBy('DATE(sale.created_at)', 'ASC')
-      .getRawMany<{ date: string; revenue: string; transactionCount: string }>()
+      .getRawMany<{ date: string | Date; revenue: string; transactionCount: string }>()
       .then((rows) =>
         rows.map((row) => ({
-          date: row.date,
+          date: row.date instanceof Date ? row.date.toISOString().slice(0, 10) : String(row.date),
           revenue: round2(Number.parseFloat(row.revenue)),
           transactionCount: Number.parseInt(row.transactionCount, 10),
         })),
@@ -367,6 +371,10 @@ export class SalesService {
   }
 
   async getTopProducts(limit = 5, days = 30) {
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    const startStr = startDate.toISOString().slice(0, 10);
+
     return this.saleItemsRepository
       .createQueryBuilder('item')
       .innerJoin('item.sale', 'sale')
@@ -375,9 +383,7 @@ export class SalesService {
       .addSelect('SUM(item.quantity)', 'unitsSold')
       .addSelect('SUM(item.line_total)', 'revenue')
       .where('sale.status = :status', { status: SaleStatus.COMPLETED })
-      .andWhere(`sale.created_at >= (CURRENT_DATE - (:days || ' days')::interval)`, {
-        days,
-      })
+      .andWhere('DATE(sale.created_at) >= :startStr', { startStr })
       .groupBy('item.medicineId')
       .addGroupBy('item.medicineName')
       .orderBy('SUM(item.quantity)', 'DESC')
@@ -481,15 +487,17 @@ export class SalesService {
    */
   private async nextInvoiceNumber(manager: EntityManager): Promise<string> {
     const day = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    await manager.query('SELECT pg_advisory_xact_lock($1)', [
-      Number.parseInt(day, 10) % 2_147_483_647,
-    ]);
+    if (this.dataSource.options.type === 'postgres') {
+      await manager.query('SELECT pg_advisory_xact_lock($1)', [
+        Number.parseInt(day, 10) % 2_147_483_647,
+      ]);
+    }
 
-    const [{ count }] = await manager.query<Array<{ count: string }>>(
-      `SELECT COUNT(*)::text AS count FROM sales WHERE DATE(created_at) = CURRENT_DATE`,
+    const [{ count }] = await manager.query<Array<{ count: string | number }>>(
+      `SELECT COUNT(*) AS count FROM sales WHERE DATE(created_at) = CURRENT_DATE`,
     );
 
-    const sequence = Number.parseInt(count, 10) + 1;
+    const sequence = Number.parseInt(String(count), 10) + 1;
     return `INV-${day}-${sequence.toString().padStart(4, '0')}`;
   }
 

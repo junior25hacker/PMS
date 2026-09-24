@@ -6,6 +6,7 @@ import { PurchaseOrder } from '../entities/purchase-order.entity';
 import { Sale } from '../entities/sale.entity';
 import { MedicinesService } from '../medicines/medicines.service';
 import { SalesService } from '../sales/sales.service';
+import { ilikeOp } from '../../common/db.util';
 
 /** Percentage change between two values, safe against divide-by-zero. */
 const pctChange = (current: number, previous: number): number => {
@@ -124,11 +125,12 @@ export class DashboardService {
       return { invoices: [], products: [], limited: true };
     }
 
+    const op = ilikeOp(this.salesRepository);
     const [invoices, products] = await Promise.all([
       this.salesRepository
         .createQueryBuilder('sale')
         .select(['sale.id', 'sale.invoiceNumber', 'sale.customerName', 'sale.totalAmount', 'sale.createdAt'])
-        .where('sale.invoiceNumber ILIKE :term OR sale.customerName ILIKE :term', {
+        .where(`sale.invoiceNumber ${op} :term OR sale.customerName ${op} :term`, {
           term: `%${term}%`,
         })
         .orderBy('sale.createdAt', 'DESC')
