@@ -59,6 +59,10 @@ export class UsersService {
     return query.getMany();
   }
 
+  async count(): Promise<number> {
+    return this.usersRepository.count();
+  }
+
   async findOne(id: number): Promise<User> {
     const user = await this.usersRepository.findOne({ where: { id } });
     if (!user) throw new NotFoundException(`User #${id} was not found`);

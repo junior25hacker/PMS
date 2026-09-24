@@ -14,6 +14,7 @@ import { UsersService } from '../users/users.service';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
 
 interface TokenPayload {
   sub: number;
@@ -35,6 +36,24 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService<AppConfig, true>,
   ) {}
+
+  /** Registers a new user account and returns an authentication session. */
+  async register(dto: RegisterDto): Promise<AuthResponseDto> {
+    const totalUsers = await this.usersService.count();
+    const role = totalUsers === 0 ? UserRole.ADMIN : (dto.role ?? UserRole.CASHIER);
+
+    const user = await this.usersService.create({
+      fullName: dto.fullName,
+      email: dto.email,
+      password: dto.password,
+      role,
+      phone: dto.phone,
+      isActive: true,
+    });
+
+    this.logger.log(`New user registered: ${user.email} (${user.role})`);
+    return this.buildAuthResponse(user, false);
+  }
 
   /** Validates credentials and issues an access + refresh token pair. */
   async login(dto: LoginDto): Promise<AuthResponseDto> {

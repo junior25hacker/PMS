@@ -30,6 +30,39 @@ import {
       inject: [ConfigService],
       useFactory: (config: ConfigService<AppConfig, true>) => {
         const db = config.get('db', { infer: true });
+
+        const entities = [
+          User,
+          Category,
+          Supplier,
+          Medicine,
+          Batch,
+          PurchaseOrder,
+          PurchaseOrderItem,
+          Sale,
+          SaleItem,
+          Patient,
+          Prescription,
+          PrescriptionItem,
+        ];
+
+        if (db.type === 'postgres') {
+          return {
+            type: 'postgres' as const,
+            url: db.url || undefined,
+            host: db.url ? undefined : db.host,
+            port: db.url ? undefined : db.port,
+            username: db.url ? undefined : db.user,
+            password: db.url ? undefined : db.password,
+            database: db.url ? undefined : db.name,
+            ssl: db.ssl,
+            entities,
+            synchronize: db.synchronize,
+            logging: db.logging,
+            autoLoadEntities: true,
+          };
+        }
+
         const candidateDbPaths = [
           path.resolve(process.cwd(), 'pharmly.sqlite'),
           path.resolve(process.cwd(), 'backend', 'pharmly.sqlite'),
@@ -49,20 +82,7 @@ import {
           type: 'sqlite' as const,
           database: dbPath,
           driver: sqlite3,
-          entities: [
-            User,
-            Category,
-            Supplier,
-            Medicine,
-            Batch,
-            PurchaseOrder,
-            PurchaseOrderItem,
-            Sale,
-            SaleItem,
-            Patient,
-            Prescription,
-            PrescriptionItem,
-          ],
+          entities,
           synchronize: db.synchronize,
           logging: db.logging,
           autoLoadEntities: true,

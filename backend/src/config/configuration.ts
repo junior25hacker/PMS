@@ -10,6 +10,8 @@ export interface AppConfig {
   apiPrefix: string;
   corsOrigins: string[];
   db: {
+    type: 'sqlite' | 'postgres';
+    url?: string;
     host: string;
     port: number;
     user: string;
@@ -17,6 +19,7 @@ export interface AppConfig {
     name: string;
     synchronize: boolean;
     logging: boolean;
+    ssl: boolean | { rejectUnauthorized: boolean };
   };
   jwt: {
     secret: string;
@@ -45,23 +48,47 @@ const toFloat = (value: string | undefined, fallback: number): number => {
   return Number.isNaN(parsed) ? fallback : parsed;
 };
 
-export default (): AppConfig => ({
-  env: process.env.NODE_ENV ?? 'development',
-  port: toInt(process.env.PORT, 3000),
-  apiPrefix: process.env.API_PREFIX ?? 'api/v1',
-  corsOrigins: (process.env.CORS_ORIGINS ?? 'http://localhost:5500,http://127.0.0.1:5500')
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean),
-  db: {
-    host: process.env.DB_HOST ?? 'localhost',
-    port: toInt(process.env.DB_PORT, 5432),
-    user: process.env.DB_USER ?? 'postgres',
-    password: process.env.DB_PASSWORD ?? 'postgres',
-    name: process.env.DB_NAME ?? 'pharmly',
-    synchronize: toBool(process.env.DB_SYNCHRONIZE, true),
-    logging: toBool(process.env.DB_LOGGING, false),
-  },
+export default (): AppConfig => {
+  const databaseUrl = process.env.DATABASE_URL;
+  const dbTypeEnv = (process.env.DB_TYPE ?? '').toLowerCase();
+  const isPostgres =
+    dbTypeEnv === 'postgres' ||
+    dbTypeEnv === 'postgresql' ||
+    Boolean(databaseUrl);
+
+  const urlIsLocal = databaseUrl
+    ? databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1')
+    : false;
+
+  let ssl: boolean | { rejectUnauthorized: boolean } = false;
+  if (process.env.DB_SSL === 'true') {
+    ssl = { rejectUnauthorized: false };
+  } else if (process.env.DB_SSL === 'false') {
+    ssl = false;
+  } else if (databaseUrl && !urlIsLocal) {
+    ssl = { rejectUnauthorized: false };
+  }
+
+  return {
+    env: process.env.NODE_ENV ?? 'development',
+    port: toInt(process.env.PORT, 3000),
+    apiPrefix: process.env.API_PREFIX ?? 'api/v1',
+    corsOrigins: (process.env.CORS_ORIGINS ?? 'http://localhost:5500,http://127.0.0.1:5500')
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean),
+    db: {
+      type: isPostgres ? 'postgres' : 'sqlite',
+      url: databaseUrl || undefined,
+      host: process.env.DB_HOST ?? 'localhost',
+      port: toInt(process.env.DB_PORT, 5432),
+      user: process.env.DB_USER ?? 'postgres',
+      password: process.env.DB_PASSWORD ?? 'postgres',
+      name: process.env.DB_NAME ?? 'pharmly',
+      synchronize: toBool(process.env.DB_SYNCHRONIZE, true),
+      logging: toBool(process.env.DB_LOGGING, false),
+      ssl,
+    },
   jwt: {
     secret: process.env.JWT_SECRET ?? 'dev-only-secret-change-me',
     expiresIn: process.env.JWT_EXPIRES_IN ?? '8h',
@@ -69,9 +96,10 @@ export default (): AppConfig => ({
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN ?? '7d',
   },
   bcryptSaltRounds: toInt(process.env.BCRYPT_SALT_ROUNDS, 10),
-  business: {
-    defaultTaxRate: toFloat(process.env.DEFAULT_TAX_RATE, 0.12),
-    lowStockThreshold: toInt(process.env.LOW_STOCK_THRESHOLD, 20),
-    expiryAlertDays: toInt(process.env.EXPIRY_ALERT_DAYS, 90),
-  },
-});
+    business: {
+      defaultTaxRate: toFloat(process.env.DEFAULT_TAX_RATE, 0.12),
+      lowStockThreshold: toInt(process.env.LOW_STOCK_THRESHOLD, 20),
+      expiryAlertDays: toInt(process.env.EXPIRY_ALERT_DAYS, 90),
+    },
+  };
+};

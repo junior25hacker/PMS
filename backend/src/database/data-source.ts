@@ -24,27 +24,66 @@ loadEnv();
  * `src/database/seed.ts`. The Nest runtime builds its own connection from
  * the same environment variables inside `DatabaseModule`.
  */
-export const AppDataSource = new DataSource({
-  type: 'sqlite',
-  database: 'pharmly.sqlite',
-  driver: sqlite3,
-  entities: [
-    User,
-    Category,
-    Supplier,
-    Medicine,
-    Batch,
-    PurchaseOrder,
-    PurchaseOrderItem,
-    Sale,
-    SaleItem,
-    Patient,
-    Prescription,
-    PrescriptionItem,
-  ],
-  migrations: ['src/database/migrations/*.ts'],
-  synchronize: false,
-  logging: false,
-});
+const entities = [
+  User,
+  Category,
+  Supplier,
+  Medicine,
+  Batch,
+  PurchaseOrder,
+  PurchaseOrderItem,
+  Sale,
+  SaleItem,
+  Patient,
+  Prescription,
+  PrescriptionItem,
+];
+
+const databaseUrl = process.env.DATABASE_URL;
+const dbTypeEnv = (process.env.DB_TYPE ?? '').toLowerCase();
+const isPostgres =
+  dbTypeEnv === 'postgres' ||
+  dbTypeEnv === 'postgresql' ||
+  Boolean(databaseUrl);
+
+const urlIsLocal = databaseUrl
+  ? databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1')
+  : false;
+
+let ssl: boolean | { rejectUnauthorized: boolean } = false;
+if (process.env.DB_SSL === 'true') {
+  ssl = { rejectUnauthorized: false };
+} else if (process.env.DB_SSL === 'false') {
+  ssl = false;
+} else if (databaseUrl && !urlIsLocal) {
+  ssl = { rejectUnauthorized: false };
+}
+
+export const AppDataSource = isPostgres
+  ? new DataSource({
+      type: 'postgres',
+      url: databaseUrl || undefined,
+      host: databaseUrl ? undefined : (process.env.DB_HOST ?? 'localhost'),
+      port: databaseUrl
+        ? undefined
+        : Number.parseInt(process.env.DB_PORT ?? '5432', 10),
+      username: databaseUrl ? undefined : (process.env.DB_USER ?? 'postgres'),
+      password: databaseUrl ? undefined : (process.env.DB_PASSWORD ?? 'postgres'),
+      database: databaseUrl ? undefined : (process.env.DB_NAME ?? 'pharmly'),
+      ssl,
+      entities,
+      migrations: ['src/database/migrations/*.ts'],
+      synchronize: false,
+      logging: false,
+    })
+  : new DataSource({
+      type: 'sqlite',
+      database: 'pharmly.sqlite',
+      driver: sqlite3,
+      entities,
+      migrations: ['src/database/migrations/*.ts'],
+      synchronize: false,
+      logging: false,
+    });
 
 export default AppDataSource;

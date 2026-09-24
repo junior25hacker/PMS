@@ -1,11 +1,18 @@
+databases:
+  - name: pharmly-postgres
+    databaseName: pharmly
+    user: pharmly_user
+    plan: free
+    region: oregon
+
 services:
   - type: web
     name: pharmly-pms
     env: node
     plan: free
     region: oregon
-    buildCommand: cd backend && npm install --include=dev && npm rebuild sqlite3 && npm run build
-    startCommand: cd backend && npm run start:prod
+    buildCommand: cd backend && npm install --include=dev && npm run build
+    startCommand: cd backend && node dist/database/seed.js && npm run start:prod
     healthCheckPath: /api/v1/health
     envVars:
       - key: NODE_ENV
@@ -16,6 +23,14 @@ services:
         value: 10000
       - key: API_PREFIX
         value: api/v1
+      - key: DATABASE_URL
+        fromDatabase:
+          name: pharmly-postgres
+          property: connectionString
+      - key: DB_TYPE
+        value: postgres
+      - key: DB_SYNCHRONIZE
+        value: true
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRES_IN

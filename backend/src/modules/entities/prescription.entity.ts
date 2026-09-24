@@ -7,6 +7,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { BaseEntity } from '../../common/base.entity';
+import { timestampType } from '../../common/db.util';
 import { PrescriptionStatus } from '../../common/enums';
 import { Patient } from './patient.entity';
 import { PrescriptionItem } from './prescription-item.entity';
@@ -73,7 +74,7 @@ export class Prescription extends BaseEntity {
   @Column({ name: 'allergy_override_by', type: 'varchar', length: 140, nullable: true })
   allergyOverrideBy?: string | null;
 
-  @Column({ name: 'allergy_override_at', type: 'datetime', nullable: true })
+  @Column({ name: 'allergy_override_at', type: timestampType(), nullable: true })
   allergyOverrideAt?: Date | null;
 
   @Column({ name: 'created_by_id', type: 'int', nullable: true })

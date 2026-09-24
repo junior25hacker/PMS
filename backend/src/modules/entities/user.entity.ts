@@ -1,6 +1,7 @@
 import { Exclude } from 'class-transformer';
 import { Column, Entity, Index, OneToMany } from 'typeorm';
 import { BaseEntity } from '../../common/base.entity';
+import { timestampType } from '../../common/db.util';
 import { UserRole } from '../../common/enums';
 import { Sale } from './sale.entity';
 
@@ -27,7 +28,7 @@ export class User extends BaseEntity {
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
 
-  @Column({ name: 'last_login_at', type: 'datetime', nullable: true })
+  @Column({ name: 'last_login_at', type: timestampType(), nullable: true })
   lastLoginAt?: Date | null;
 
   @OneToMany(() => Sale, (sale) => sale.cashier)

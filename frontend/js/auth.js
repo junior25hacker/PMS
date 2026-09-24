@@ -29,6 +29,16 @@ const Auth = {
     return res;
   },
 
+  async register(data, remember = false) {
+    const res = await API.post('/auth/register', data);
+    this._storeToken('pharmly_refresh', res.refreshToken, remember);
+    API.setToken(res.accessToken, remember);
+    this._storeUser(res.user, remember);
+    this.user = res.user;
+    this._scheduleAutoRefresh(res.expiresIn);
+    return res;
+  },
+
   logout() {
     API.clearToken();
     sessionStorage.clear();
