@@ -1,5 +1,5 @@
 # Multi-stage build for Pharmly PMS
-FROM node:20-alpine AS builder
+FROM node:20-bookworm-slim AS builder
 
 WORKDIR /app
 
@@ -18,7 +18,7 @@ WORKDIR /app/backend
 RUN npm run build
 
 # Production runtime stage
-FROM node:20-alpine AS runner
+FROM node:20-bookworm-slim AS runner
 
 WORKDIR /app
 

@@ -127,7 +127,7 @@ async function bootstrap(): Promise<void> {
 
   app.enableShutdownHooks();
 
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
 
   logger.log(`Pharmly API listening on http://localhost:${port}/${apiPrefix}`);
   logger.log(`Swagger UI:                http://localhost:${port}/${apiPrefix}/docs`);
