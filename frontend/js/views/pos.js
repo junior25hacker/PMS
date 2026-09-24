@@ -8,13 +8,16 @@ var PosView = {
   searchTerm: '',
   searchResults: [],
   catalog: [],
-  discount: 0,
+  discountType: 'fixed',   // 'fixed' | 'percentage'
+  discountValue: 0,        // raw user input ($ or %)
+  discountApprovalCode: '',
   customerName: '',
   customerPhone: '',
   paymentMethod: 'cash',
   amountPaid: null,
   lastReceipt: null,
   _catalogLoaded: false,
+  APPROVAL_THRESHOLD: 10,  // % — must match backend constant
 
   async load() {
     if (!this._catalogLoaded) {
@@ -47,10 +50,31 @@ var PosView = {
           <div class="pos-total">
             <div class="pos-total-row"><span>Subtotal</span><span>${fmtCurrency(this.subtotal())}</span></div>
             <div class="pos-total-row"><span>Tax</span><span>${fmtCurrency(this.tax())}</span></div>
-            <div class="pos-total-row pos-discount-row">
-              <span>Discount $</span>
-              <input type="number" id="pos-discount" min="0" step="0.01" value="${this.discount || ''}" style="width:90px; padding:3px 6px;" onchange="PosView.setDiscount(this.value)">
+
+            <div class="pos-total-row pos-discount-row" style="align-items:flex-start; flex-direction:column; gap:6px;">
+              <div style="display:flex; align-items:center; gap:8px; width:100%;">
+                <span style="white-space:nowrap;">Discount</span>
+                <select id="pos-discount-type" style="padding:3px 6px; width:110px;" onchange="PosView.discountType = this.value; PosView.discountValue = 0; App.refresh();">
+                  <option value="fixed" ${this.discountType === 'fixed' ? 'selected' : ''}>$ Fixed</option>
+                  <option value="percentage" ${this.discountType === 'percentage' ? 'selected' : ''}>% Percentage</option>
+                </select>
+                <input type="number" id="pos-discount-val" min="0" step="0.01"
+                  max="${this.discountType === 'percentage' ? 100 : ''}"
+                  value="${this.discountValue || ''}" style="width:80px; padding:3px 6px;"
+                  placeholder="${this.discountType === 'percentage' ? '0–100' : '0.00'}"
+                  onchange="PosView.setDiscount(this.value)">
+                <span style="color:var(--text-muted); font-size:12px;">
+                  ${this.discountType === 'percentage' && this.discountValue > 0 ? '= ' + fmtCurrency(this.discountAmount()) : ''}
+                </span>
+              </div>
+              ${this.requiresApproval() ? `
+                <div style="width:100%; display:flex; align-items:center; gap:8px;">
+                  <span style="color:#b91c1c; font-size:12px; white-space:nowrap;">⚠️ Manager Code</span>
+                  <input type="text" id="pos-approval-code" placeholder="Approval code required (>${this.APPROVAL_THRESHOLD}% discount)" style="flex:1; padding:3px 6px; border:1px solid #fca5a5; border-radius:4px;"
+                    value="${esc(this.discountApprovalCode)}" oninput="PosView.discountApprovalCode = this.value">
+                </div>` : ''}
             </div>
+
             <div class="pos-total-row"><span>Customer</span>
               <input type="text" id="pos-customer" placeholder="Walk-in" value="${esc(this.customerName)}" style="width:150px; padding:3px 6px;" onchange="PosView.customerName = this.value">
             </div>
@@ -203,13 +227,26 @@ var PosView = {
   },
 
   removeLine(i) { this.cart.splice(i, 1); App.refresh(); },
-  clearCart() { this.cart = []; this.discount = 0; this.customerName = ''; this.amountPaid = null; App.refresh(); },
+  clearCart() { this.cart = []; this.discountType = 'fixed'; this.discountValue = 0; this.discountApprovalCode = ''; this.customerName = ''; this.amountPaid = null; App.refresh(); },
 
-  setDiscount(value) { this.discount = Math.max(0, Number(value) || 0); App.refresh(); },
+  setDiscount(value) { this.discountValue = Math.max(0, Number(value) || 0); App.refresh(); },
+
+  discountAmount() {
+    if (this.discountType === 'percentage') {
+      return round2((this.subtotal() + this.tax()) * (Math.min(this.discountValue, 100) / 100));
+    }
+    return round2(Math.min(this.discountValue, this.subtotal() + this.tax()));
+  },
+
+  requiresApproval() {
+    const total = this.subtotal() + this.tax();
+    if (total <= 0 || this.discountAmount() <= 0) return false;
+    return (this.discountAmount() / total) * 100 > this.APPROVAL_THRESHOLD;
+  },
 
   subtotal() { return this.cart.reduce((s, l) => s + l.quantity * l.unitPrice, 0); },
   tax() { return this.cart.reduce((s, l) => s + l.quantity * l.unitPrice * l.taxRate, 0); },
-  total() { return Math.max(0, this.subtotal() + this.tax() - this.discount); },
+  total() { return Math.max(0, this.subtotal() + this.tax() - this.discountAmount()); },
   changeDue() {
     if (this.paymentMethod !== 'cash' || this.amountPaid == null) return 0;
     return Math.max(0, this.amountPaid - this.total());
@@ -227,7 +264,10 @@ var PosView = {
       paymentMethod: this.paymentMethod,
       customerName: this.customerName || undefined,
       customerPhone: this.customerPhone || undefined,
-      discountAmount: this.discount > 0 ? this.discount : undefined,
+      discountType: this.discountValue > 0 ? this.discountType : undefined,
+      discountAmount: this.discountType === 'fixed' && this.discountValue > 0 ? this.discountValue : undefined,
+      discountPercentage: this.discountType === 'percentage' && this.discountValue > 0 ? this.discountValue : undefined,
+      discountApprovalCode: this.discountApprovalCode.trim() || undefined,
       amountPaid: this.paymentMethod === 'cash' ? (this.amountPaid ?? round2(this.total())) : undefined,
     };
 
@@ -240,11 +280,13 @@ var PosView = {
       this.lastReceipt = sale;
       await this.showReceipt(sale.id, true);
       this.cart = [];
-      this.discount = 0;
+      this.discountType = 'fixed';
+      this.discountValue = 0;
+      this.discountApprovalCode = '';
       this.customerName = '';
       this.customerPhone = '';
       this.amountPaid = null;
-      this._catalogLoaded = false; // re-fetch fresh stock levels
+      this._catalogLoaded = false;
       App.refresh();
     } catch (e) {
       toast(e.message, 'error');
@@ -271,7 +313,11 @@ var PosView = {
           <div class="receipt-total">
             <div class="receipt-row"><span>Subtotal</span><span>${fmtCurrency(r.totals.subtotal)}</span></div>
             <div class="receipt-row"><span>Tax</span><span>${fmtCurrency(r.totals.tax)}</span></div>
-            ${r.totals.discount > 0 ? `<div class="receipt-row"><span>Discount</span><span>−${fmtCurrency(r.totals.discount)}</span></div>` : ''}
+            ${r.totals.discount > 0 ? `
+              <div class="receipt-row" style="color:#16a34a;">
+                <span>Discount${r.totals.discountType === 'percentage' ? ` (${r.totals.discountPercentage}%)` : ' (Fixed)'}</span>
+                <span>−${fmtCurrency(r.totals.discount)}</span>
+              </div>` : ''}
             <div class="receipt-row"><strong>Total</strong><strong>${fmtCurrency(r.totals.total)}</strong></div>
             <div class="receipt-row"><span>Paid (${esc(r.paymentMethod)})</span><span>${fmtCurrency(r.totals.amountPaid)}</span></div>
             ${r.totals.changeDue > 0 ? `<div class="receipt-row"><strong>Change</strong><strong>${fmtCurrency(r.totals.changeDue)}</strong></div>` : ''}
@@ -293,7 +339,7 @@ var PosView = {
           <div class="rule"></div>
           <div class="row"><span>Subtotal</span><span>${fmtCurrency(r.totals.subtotal)}</span></div>
           <div class="row"><span>Tax</span><span>${fmtCurrency(r.totals.tax)}</span></div>
-          ${r.totals.discount > 0 ? `<div class="row"><span>Discount</span><span>-${fmtCurrency(r.totals.discount)}</span></div>` : ''}
+          ${r.totals.discount > 0 ? `<div class="row"><span>Discount${r.totals.discountType === 'percentage' ? ` (${r.totals.discountPercentage}%)` : ' (Fixed)'}</span><span>-${fmtCurrency(r.totals.discount)}</span></div>` : ''}
           <div class="total row"><span>TOTAL</span><span>${fmtCurrency(r.totals.total)}</span></div>
           <div class="row"><span>Paid (${esc(r.paymentMethod)})</span><span>${fmtCurrency(r.totals.amountPaid)}</span></div>
           ${r.totals.changeDue > 0 ? `<div class="row"><span>Change</span><span>${fmtCurrency(r.totals.changeDue)}</span></div>` : ''}

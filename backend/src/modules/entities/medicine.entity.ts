@@ -14,14 +14,14 @@ import { SaleItem } from './sale-item.entity';
 @Entity('medicines')
 export class Medicine extends BaseEntity {
   @Index()
-  @Column({ length: 160 })
+  @Column({ type: 'varchar', length: 160 })
   name: string;
 
   @Column({ type: 'varchar', name: 'generic_name', length: 160, nullable: true })
   genericName?: string | null;
 
   @Index({ unique: true })
-  @Column({ length: 64 })
+  @Column({ type: 'varchar', length: 64 })
   sku: string;
 
   /** EAN/UPC code used by the POS barcode input. */
@@ -29,11 +29,11 @@ export class Medicine extends BaseEntity {
   @Column({ type: 'varchar', name: 'barcode', length: 64, nullable: true })
   barcode?: string | null;
 
-  @Column({ length: 20, default: 'unit' })
+  @Column({ type: 'varchar', length: 20, default: 'unit' })
   unit: string;
 
   /** Dosage form: tablet, syrup, capsule, injection ... */
-  @Column({ name: 'dosage_form', length: 60, default: 'tablet' })
+  @Column({ name: 'dosage_form', type: 'varchar', length: 60, default: 'tablet' })
   dosageForm: string;
 
   @Column({ type: 'varchar', length: 120, nullable: true })
@@ -42,7 +42,7 @@ export class Medicine extends BaseEntity {
   @Column({ type: 'varchar', name: 'strength', length: 60, nullable: true })
   strength?: string | null;
 
-  @Column({ type: 'enum', enum: MedicineType, default: MedicineType.OTC })
+  @Column({ type: 'varchar', enum: MedicineType, default: MedicineType.OTC })
   type: MedicineType;
 
   @ManyToOne(() => Category, (category) => category.medicines, {
@@ -62,7 +62,7 @@ export class Medicine extends BaseEntity {
   /** Default tax rate applied at the POS, e.g. 0.12 for 12%. */
   @Column({
     name: 'tax_rate',
-    type: 'numeric',
+    type: 'decimal',
     precision: 5,
     scale: 4,
     default: 0.12,

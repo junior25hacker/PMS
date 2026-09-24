@@ -30,12 +30,8 @@ import {
       useFactory: (config: ConfigService<AppConfig, true>) => {
         const db = config.get('db', { infer: true });
         return {
-          type: 'postgres' as const,
-          host: db.host,
-          port: db.port,
-          username: db.user,
-          password: db.password,
-          database: db.name,
+          type: 'sqlite' as const,
+          database: 'pharmly.sqlite',
           entities: [
             User,
             Category,

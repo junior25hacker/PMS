@@ -19,6 +19,9 @@ import { SaleQueryDto } from './dto/sale-query.dto';
 /** Rounds to 2 decimals using banker-safe arithmetic on cents. */
 const round2 = (value: number): number => Math.round((value + Number.EPSILON) * 100) / 100;
 
+/** Discount above this % of the order total requires a manager approval code. */
+const DISCOUNT_APPROVAL_THRESHOLD_PERCENT = 10;
+
 interface ConsumedLine {
   medicine: Medicine;
   batch: Batch;
@@ -76,9 +79,35 @@ export class SalesService {
         ),
       );
 
-      const discountAmount = round2(
-        Math.min(dto.discountAmount ?? 0, subtotal + taxAmount),
-      );
+      // ── Discount resolution ───────────────────────────────────────────────
+      let resolvedDiscount = 0;
+      let resolvedDiscountType: 'fixed' | 'percentage' | null = null;
+      let resolvedDiscountPercentage: number | null = null;
+
+      if (dto.discountType === 'percentage' && dto.discountPercentage != null) {
+        resolvedDiscountPercentage = dto.discountPercentage;
+        resolvedDiscountType = 'percentage';
+        resolvedDiscount = round2((subtotal + taxAmount) * (dto.discountPercentage / 100));
+      } else if (dto.discountAmount != null && dto.discountAmount > 0) {
+        resolvedDiscountType = 'fixed';
+        resolvedDiscount = dto.discountAmount;
+      }
+
+      const discountPercent = subtotal + taxAmount > 0
+        ? (resolvedDiscount / (subtotal + taxAmount)) * 100
+        : 0;
+
+      // ── Manager approval check ────────────────────────────────────────────
+      if (discountPercent > DISCOUNT_APPROVAL_THRESHOLD_PERCENT) {
+        if (!dto.discountApprovalCode || dto.discountApprovalCode.trim().length === 0) {
+          throw new BadRequestException(
+            `Discounts above ${DISCOUNT_APPROVAL_THRESHOLD_PERCENT}% require a manager approval code. ` +
+            `This discount is ${discountPercent.toFixed(1)}% of the order total.`,
+          );
+        }
+      }
+
+      const discountAmount = round2(Math.min(resolvedDiscount, subtotal + taxAmount));
       const totalAmount = round2(subtotal + taxAmount - discountAmount);
 
       if (totalAmount < 0) {
@@ -109,6 +138,12 @@ export class SalesService {
         customerPhone: dto.customerPhone ?? null,
         subtotal,
         discountAmount,
+        discountType: resolvedDiscountType,
+        discountPercentage: resolvedDiscountPercentage,
+        discountApprovalCode: dto.discountApprovalCode?.trim() ?? null,
+        discountApprovedBy: discountPercent > DISCOUNT_APPROVAL_THRESHOLD_PERCENT
+          ? (cashier.fullName ?? cashier.email)
+          : null,
         taxAmount,
         totalAmount,
         paymentMethod,
@@ -221,6 +256,8 @@ export class SalesService {
       totals: {
         subtotal: sale.subtotal,
         discount: sale.discountAmount,
+        discountType: sale.discountType ?? null,
+        discountPercentage: sale.discountPercentage ?? null,
         tax: sale.taxAmount,
         total: sale.totalAmount,
         amountPaid: sale.amountPaid,

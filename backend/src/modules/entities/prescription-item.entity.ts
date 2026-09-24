@@ -19,16 +19,16 @@ export class PrescriptionItem extends BaseEntity {
   @Column({ name: 'medicine_id', type: 'int', nullable: true })
   medicineId?: number | null;
 
-  @Column({ name: 'drug_name', length: 160 })
+  @Column({ name: 'drug_name', type: 'varchar', length: 160 })
   drugName: string;
 
-  @Column({ length: 80 })
+  @Column({ type: 'varchar', length: 80 })
   dosage: string;
 
-  @Column({ length: 80, default: 'Once daily' })
+  @Column({ type: 'varchar', length: 80, default: 'Once daily' })
   frequency: string;
 
-  @Column({ length: 80 })
+  @Column({ type: 'varchar', length: 80 })
   duration: string;
 
   @Column({ name: 'quantity_prescribed', type: 'int', default: 1 })
