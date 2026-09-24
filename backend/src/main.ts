@@ -24,10 +24,7 @@ async function bootstrap(): Promise<void> {
   // ---------------------------------------------------------------------------
   app.use(
     helmet({
-      // The Swagger UI ships inline scripts/styles; keep CSP relaxed in dev.
-      contentSecurityPolicy: config.get('env', { infer: true }) === 'production'
-        ? undefined
-        : false,
+      contentSecurityPolicy: false,
       crossOriginEmbedderPolicy: false,
     }),
   );
@@ -115,7 +112,7 @@ async function bootstrap(): Promise<void> {
       app.useStaticAssets(frontendDir, { index: 'index.html' });
       const express = await import('express');
       const router = express.Router();
-      router.get(/^\/(?!(api|assets)\/).*/, (_req, res) => {
+      router.get(/^\/(?!(api|assets|css|js|favicon\.ico)).*/, (_req, res) => {
         res.sendFile(path.join(frontendDir, 'index.html'));
       });
       app.use(router);

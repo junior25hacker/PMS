@@ -20,7 +20,11 @@ const App = {
     users: { view: 'UsersView', title: 'Users' },
   },
 
+  _initialized: false,
+
   init() {
+    if (this._initialized) return;
+    this._initialized = true;
     Auth.init();
     window.addEventListener('hashchange', () => this.handleRoute());
     document.getElementById('menu-toggle').addEventListener('click', () => this.toggleSidebar());
@@ -48,8 +52,13 @@ const App = {
     const route = hash.split('/')[0];
     this.currentRoute = route;
 
-    if (route === 'login') { this.showLogin(); return; }
-    if (!Auth.isAuthenticated()) { window.location.hash = '#login'; return; }
+    if (route === 'login' || !Auth.isAuthenticated()) {
+      if (window.location.hash !== '#login') {
+        window.location.hash = '#login';
+      }
+      this.showLogin();
+      return;
+    }
 
     if (!Auth.canAccessRoute(route)) {
       toast('You do not have permission to view that page', 'error');
@@ -195,6 +204,16 @@ const App = {
   },
 };
 
-document.getElementById('modal-overlay').addEventListener('click', (e) => {
-  if (e.target.id === 'modal-overlay') App.closeModal();
-});
+if (typeof document !== 'undefined') {
+  const overlay = document.getElementById('modal-overlay');
+  if (overlay) {
+    overlay.addEventListener('click', (e) => {
+      if (e.target.id === 'modal-overlay') App.closeModal();
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => App.init());
+  } else {
+    App.init();
+  }
+}

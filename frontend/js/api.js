@@ -20,8 +20,10 @@ const API = {
     if (window.PHARMLY_API_BASE) return String(window.PHARMLY_API_BASE).replace(/\/$/, '');
     const override = localStorage.getItem('pharmly_api_base');
     if (override) return override.replace(/\/$/, '');
-    if (window.location.port === '3000') return '/api/v1';
-    return 'http://localhost:3000/api/v1';
+    // If running in local dev via Live Server on port 5500:
+    if (window.location.port === '5500') return 'http://localhost:3000/api/v1';
+    // When served from the backend (Render production or localhost:3000), use same-origin /api/v1:
+    return '/api/v1';
   })(),
 
   token: null,
